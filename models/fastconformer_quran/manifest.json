@@ -1,0 +1,26 @@
+{
+ "format": 1,
+ "name": "fastconformer_quran",
+ "file": "model.q8.onnx",
+ "size": 131801646,
+ "sha256": "bdb590bb27c78963c8bdae58ee50d9d5e6c1ad61d37cba27374bd1ff0441b118",
+ "parts": [
+  {
+   "name": "model.q8.onnx.part01",
+   "size": 47185920,
+   "sha256": "fa4b2ef618c2404b96773c47ab2203b5d5d1a897b2e8e8e3123400db9383997b"
+  },
+  {
+   "name": "model.q8.onnx.part02",
+   "size": 47185920,
+   "sha256": "a5c26a5bc84c64a1396452dfe2e9fe8d30694592c7eecc18cbf767c90b553ce1"
+  },
+  {
+   "name": "model.q8.onnx.part03",
+   "size": 37429806,
+   "sha256": "b7c08a95238121d42d2d750ea8d076efcde7d3ec82b6bdee9d96088621b03998"
+  }
+ ],
+ "source": "https://huggingface.co/Muno459/fastconformer-quran",
+ "license": "NPL-1.1 (non-commercial, share-alike), see LICENSE"
+}
