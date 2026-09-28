@@ -1,0 +1,15 @@
+:root { --bg:#fbfaf6; --ink:#222; --muted:#666; --link:#1565c0; --green:#1b7f3a; --todo:#b71c1c; }
+@media (prefers-color-scheme: dark) { :root { --bg:#16181a; --ink:#e8e6e1; --muted:#9a9a9a; --link:#7fb3ff; --green:#4caf50; --todo:#ff8a80; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.6 Inter, "Segoe UI", system-ui, sans-serif; }
+main { max-width:44rem; margin:0 auto; padding:1.5rem 16px 3rem; }
+h1 { font-size:1.6rem; margin:.4rem 0 .2rem; }
+h2 { font-size:1.1rem; margin:1.6rem 0 .3rem; }
+a { color:var(--link); }
+code { font-size:.9em; overflow-wrap:anywhere; }
+.muted { color:var(--muted); }
+.todo { color:var(--todo); font-weight:600; }
+.hero { display:flex; align-items:center; gap:1rem; }
+.hero img { width:72px; height:72px; border-radius:16px; }
+.links { list-style:none; padding:0; }
+.links li { margin:.35rem 0; }
