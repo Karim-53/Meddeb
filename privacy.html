@@ -10,7 +10,7 @@
 <main>
 <p><a href="./">← Meddeb</a></p>
 <h1>Privacy policy</h1>
-<p class="muted">Last updated: 28 September 2026</p>
+<p class="muted">Last updated: 1 October 2026</p>
 
 <h2>In short</h2>
 <p>Meddeb listens to your recitation <b>on your own device</b>. Your voice, your recordings and your marks are never
@@ -27,15 +27,28 @@ EU General Data Protection Regulation (GDPR) for this website and the Meddeb app
   <li><b>What is stored, and where.</b> Each session is saved in your profile folder on the device: the recording
     (<code>audio.wav</code>), the recognised words and verdicts, your manual marks and your settings. This data
     stays on the device. Only you can export it (Settings → Export profile), and you choose where the file goes.</li>
-  <li><b>Network.</b> The app uses the internet for one thing only: downloading the speech model the first time you
-    press the microphone. It is downloaded from GitHub (<code>raw.githubusercontent.com</code>), which receives your
-    IP address and technical request data like for any download; see
-    <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's
-    privacy statement</a>. No personal data is sent with that request.</li>
+  <li><b>Network.</b> The app uses the internet for two things only:
+    <ul>
+      <li>downloading the speech model the first time you press the microphone. It is downloaded from GitHub
+        (<code>raw.githubusercontent.com</code>), which receives your IP address and technical request data like for
+        any download; see
+        <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's
+        privacy statement</a>;</li>
+      <li>in <b>Listen</b>, downloading the recitation you choose (Yasser Al-Dossary, one audio file per ayah) from
+        EveryAyah (<code>everyayah.com</code>), whose files are delivered by the BunnyCDN network. EveryAyah and
+        BunnyCDN receive your IP address, technical request data and the names of the audio files requested, like
+        for any download; see <a href="https://bunny.net/privacy/">BunnyCDN's privacy policy</a>. On Android the
+        downloaded files, and the rest of that surah fetched in the background on an unmetered network (Wi-Fi),
+        are kept in the app's own storage on the device (not in your profile), so that later plays work offline;
+        on the PC the browser plays them from EveryAyah and may cache them.</li>
+    </ul>
+    Apart from this request data (your IP address and the names of the files requested), nothing is sent: no
+    account or identifier, and nothing from your profile (recordings, recitation, marks, progress).</li>
   <li><b>Permissions.</b> Microphone (to listen), notifications (the "Meddeb is listening" notice that keeps the
-    microphone working with the screen off), internet (model download only).</li>
-  <li><b>Deleting your data.</b> Uninstalling the app deletes its profile folder. You can also delete single
-    session folders from the profile.</li>
+    microphone working with the screen off, and the playback controls while Listen plays), internet (model
+    download and Listen audio only).</li>
+  <li><b>Deleting your data.</b> Uninstalling the app deletes its profile folder and the downloaded recitation
+    audio. You can also delete single session folders from the profile.</li>
 </ul>
 
 <h2>This website</h2>
