@@ -21,7 +21,7 @@ Contents
 
 1. Qur'an text and data
 2. Speech model
-3. Recitation audio (Listen)
+3. Recitation audio (Listen, voice commands)
 4. Fonts
 5. Android app: Java and Kotlin libraries
 6. Android app: Python (Chaquopy)
@@ -143,19 +143,8 @@ Contents
   ONNX) and licenses the result under NPL-1.1. The CC BY 4.0 terms cover NVIDIA's material only. The
   training data named in the model card (for example Tarteel's EveryAyah dataset) keep their own licences.
 
-### Demo recitation demo_ikhlas.wav (Abdullah Basfar, Al-Ikhlas)
 
-- Version: demo/02_basfar_ikhlas.wav of the fastconformer-quran repository
-- SPDX: NOASSERTION (shipped by the model's author with the model, under NPL-1.1; the recording's own
-  licence is not documented)
-- Copyright: recitation by Abdullah Basfar; the rights holder of the recording is not documented
-- Source: https://huggingface.co/Muno459/fastconformer-quran (folder demo/)
-- Ships in: Android app (meddeb_models/fastconformer_quran/demo_ikhlas.wav, the model's self-test)
-- Licence text: licenses/npl_1_1_fastconformer_quran.txt (the model repository's licence)
-- Notes: to be replaced by a recording of Meddeb's author.
-
-
-## 3. Recitation audio (Listen)
+## 3. Recitation audio (Listen, voice commands)
 
 ### Recitation by Yasser Al-Dossary (EveryAyah.com)
 
@@ -164,14 +153,36 @@ Contents
   VerseByVerseQuran.com; the archived copy of that licence (2012) is CC BY-NC 2.5 Canada.
 - Copyright: recitation by Yasser Al-Dossary; files published by EveryAyah.com (VerseByVerseQuran.com)
 - Source: https://everyayah.com/data/Yasser_Ad-Dussary_128kbps/ (served through the BunnyCDN network)
-- Ships in: not in the APK nor in any Meddeb repository. Android app, downloaded: Listen stores the ayat it
-  plays (and the rest of that surah, fetched on an unmetered network) in the app's own storage, for the
-  user's own offline listening. PC app: played from EveryAyah directly (the browser may cache them).
+- Ships in: not in the APK nor in any Meddeb repository. Android app, downloaded: Listen and the voice
+  commands store the ayat they play (Listen also the rest of that surah, fetched on an unmetered network) in
+  the app's own storage, for the user's own offline listening. PC app: played from EveryAyah directly (the
+  browser may cache them).
 - Licence text: none bundled; CC BY-NC 2.5 Canada: https://creativecommons.org/licenses/by-nc/2.5/ca/
   (archived licence page:
   http://web.archive.org/web/20121021062917/http://www.versebyversequran.com/site/license)
 - Notes: credit shown in Listen: "Recitation: Yasser Al-Dossary — audio files: EveryAyah.com". The files
   are not re-hosted; re-hosting them would need the rights holders' permission.
+
+### Word timings of the recitation by Yasser Al-Dossary (yasser_word_timings.json.gz)
+
+- Version: format 1, computed in October 2026 by tools/build_word_timings.py over the 6,236 files of
+  Yasser_Ad-Dussary_128kbps with fastconformer-quran (fp32 ONNX, CTC forced alignment; D4.6)
+- SPDX: LicenseRef-NPL-1.1 (an output of the fastconformer-quran model: a "Derivative" in the sense of NPL-1.1
+  §1) AND NOASSERTION (derived from the EveryAyah audio files, CC BY-NC 2.5 Canada, see the entry above)
+- Copyright: computed by Meddeb from the recitation by Yasser Al-Dossary (files published by EveryAyah.com /
+  VerseByVerseQuran.com) with fastconformer-quran by Muno459 / Quran-Lab
+- Source: tools/build_word_timings.py (source repository) over
+  https://everyayah.com/data/Yasser_Ad-Dussary_128kbps/
+- Ships in: Android app (recite/data/yasser_word_timings.json.gz, about 0.2 MB) and PC app (source
+  repository). No audio: the start of every word inside each ayah file, in centiseconds, which the voice
+  commands use to play the reciter's word, the rest of the ayah or the ayah up to the cursor (X2.15).
+- Licence text: licenses/npl_1_1_fastconformer_quran.txt (the model's licence, under which the file is shipped);
+  CC BY-NC 2.5 Canada: https://creativecommons.org/licenses/by-nc/2.5/ca/ (none bundled)
+- Notes: shipped non-commercially, with no profit (NPL-1.1 §3 and the audio's NonCommercial term), with both
+  credits: the model (fastconformer-quran by Muno459, NPL-1.1) and the recitation ("Recitation: Yasser
+  Al-Dossary — audio files: EveryAyah.com", VerseByVerseQuran.com). The QDC (quran.com) and QUL segments
+  used only to calibrate the boundary rule are not shipped (Quran Foundation developer terms; no stated
+  licence).
 
 
 ## 4. Fonts
