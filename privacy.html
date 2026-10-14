@@ -10,7 +10,7 @@
 <main>
 <p><a href="./">← Meddeb</a></p>
 <h1>Privacy policy</h1>
-<p class="muted">Last updated: 1 October 2026</p>
+<p class="muted">Last updated: 14 October 2026</p>
 
 <h2>In short</h2>
 <p>Meddeb listens to your recitation <b>on your own device</b>. Your voice, your recordings and your marks are never
@@ -27,9 +27,10 @@ EU General Data Protection Regulation (GDPR) for this website and the Meddeb app
   <li><b>What is stored, and where.</b> Each session is saved in your profile folder on the device: the recording
     (<code>audio.wav</code>), the recognised words and verdicts, your manual marks and your settings. This data
     stays on the device. Only you can export it (Settings → Export profile), and you choose where the file goes.</li>
-  <li><b>Network.</b> The app uses the internet for two things only:
+  <li><b>Network.</b> The app uses the internet for three things only:
     <ul>
-      <li>downloading the speech model the first time you press the microphone. It is downloaded from GitHub
+      <li>downloading the speech model, once: on Android by itself after the first start (on the PC it is on disk).
+        It is downloaded from GitHub
         (<code>raw.githubusercontent.com</code>), which receives your IP address and technical request data like for
         any download; see
         <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's
@@ -40,15 +41,26 @@ EU General Data Protection Regulation (GDPR) for this website and the Meddeb app
         for any download; see <a href="https://bunny.net/privacy/">BunnyCDN's privacy policy</a>. On Android the
         downloaded files, and the rest of that surah fetched in the background on an unmetered network (Wi-Fi),
         are kept in the app's own storage on the device (not in your profile), so that later plays work offline;
-        on the PC the browser plays them from EveryAyah and may cache them.</li>
+        on the PC the browser plays them from EveryAyah and may cache them;</li>
+      <li>on Android, <b>looking for a new version</b> of the app: when you open About, and after 10 minutes of use
+        (at most every 12 hours once a check succeeded, at most every hour while it does not), the app fetches a small
+        file (<code>update.json</code>) from this website (GitHub
+        Pages, or the same file on <code>raw.githubusercontent.com</code>); when you press Update it downloads the new
+        version from GitHub (<code>github.com</code> and <code>release-assets.githubusercontent.com</code>). GitHub
+        receives your IP address, technical request data and the app's version (in the request's User-Agent), like
+        for any download.</li>
     </ul>
-    Apart from this request data (your IP address and the names of the files requested), nothing is sent: no
+    Apart from this request data (your IP address, the names of the files requested and, for the update check, the
+    app's version), nothing is sent: no
     account or identifier, and nothing from your profile (recordings, recitation, marks, progress).</li>
   <li><b>Permissions.</b> Microphone (to listen), notifications (the "Meddeb is listening" notice that keeps the
-    microphone working with the screen off, and the playback controls while Listen plays), internet (model
-    download and Listen audio only).</li>
-  <li><b>Deleting your data.</b> Uninstalling the app deletes its profile folder and the downloaded recitation
-    audio. You can also delete single session folders from the profile.</li>
+    microphone working with the screen off, the playback controls while Listen plays, and "Meddeb is installed"
+    after an update), internet (model download, Listen audio and the app's updates only), install apps (only
+    Meddeb's own updates, after you press Update).</li>
+  <li><b>Deleting your data.</b> Settings → Space used shows what takes space and deletes, after a confirmation,
+    your recordings, your mistake history or the downloaded recitation audio. Uninstalling the app deletes its
+    profile folder and the downloaded recitation audio. You can also delete single session folders from the
+    profile.</li>
 </ul>
 
 <h2>This website</h2>

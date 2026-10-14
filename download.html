@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meddeb – Download for Android</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<main>
+<p><a href="./">← Meddeb</a></p>
+<h1>Download Meddeb for Android</h1>
+
+<!-- latest:start -->
+<p class="muted">No version is published here yet.</p>
+<!-- latest:end -->
+
+<h2>Install</h2>
+<ol>
+  <li>On the phone, tap the download link above.</li>
+  <li>Open the downloaded file (from the browser's notification or the Downloads folder).</li>
+  <li>The first time, Android asks to allow the browser (or the file app) to install unknown apps: Settings →
+    <b>Allow from this source</b>, then go back.</li>
+  <li>Tap <b>Install</b>.</li>
+  <li>Open Meddeb. The first start takes up to a minute, and Meddeb then downloads its speech model (about 130 MB)
+    by itself.</li>
+</ol>
+
+<h2>Updates</h2>
+<p>Meddeb looks at this website by itself (when you open About, and after 10 minutes of use). When a new version is
+here, the menu ☰ ends with <b>Update 0.10 → 0.11</b>: a tap downloads it and installs it (the first time, Android asks
+you to allow Meddeb to install apps). You can also install a newer file from this page over the old one. Your
+profile and the speech model stay.</p>
+<p><b>Never uninstall to update</b>: uninstalling deletes your profile (your recordings, marks and progress). Settings →
+Export profile keeps a copy first.</p>
+
+<h2>In the car (Android Auto)</h2>
+<p>Android Auto shows an app that does not come from Google Play only while its own <b>Unknown sources</b> setting is
+on: Settings → Connected devices → Android Auto, tap <b>Version</b> about 10 times and confirm, then ⋮ → Developer
+settings → Unknown sources.</p>
+
+<h2>Check the file</h2>
+<p>The SHA-256 above is the file's checksum. <code>apksigner verify --print-certs meddeb_v….apk</code> shows the
+signing certificate; Android refuses any update signed with another one.</p>
+
+<h2>Older versions</h2>
+<p><a href="https://github.com/Karim-53/Meddeb/releases">github.com/Karim-53/Meddeb/releases</a></p>
+
+<p class="muted"><a href="privacy.html">Privacy policy</a> · <a href="impressum.html">Impressum</a></p>
+</main>
+</body>
+</html>
