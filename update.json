@@ -1,0 +1,18 @@
+{
+ "format": 1,
+ "app_id": "io.github.karim53.meddeb",
+ "version_code": 11,
+ "version_name": "0.11",
+ "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.11/meddeb_v0.11.apk",
+ "size": 73736257,
+ "sha256": "84f624a725d3848c3c2499da5ee7e8c931abd8af96872b220c834561628e4e20",
+ "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
+ "min_sdk": 26,
+ "min_version_code": 0,
+ "released": "2026-10-15",
+ "notes": [
+  "Change: an ayah counts as learned only once recited entirely without any mistake or hint.",
+  "Fix: the page's mistakes pill follows the page shown when you swipe."
+ ],
+ "page_url": "https://karim-53.github.io/Meddeb/download.html"
+}
