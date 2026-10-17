@@ -4,10 +4,13 @@ This repository (https://github.com/Karim-53/Meddeb, the website https://karim-5
 two kinds of material, under different licences.
 
 1. The website and the repository's own files (index.html, privacy.html, impressum.html, site.css,
-   favicon.svg, README.md, .github/): Copyright (c) 2026 Mohamed Karim Belaid, licensed under the Meddeb
-   No-Profit License 1.0 (draft), reproduced below. The Meddeb app is under the same licence. Its
-   third-party notices, THIRD_PARTY_NOTICES.md and the full licence texts in the folder licenses/, are
-   in this repository too, and the app shows them offline under About > Licences.
+   favicon.svg, README.md, screenshots/, .github/): Copyright (c) 2026 Mohamed Karim Belaid, licensed
+   under the Meddeb No-Profit License 1.0 (draft), reproduced below. The Meddeb app is under the same
+   licence. Its third-party notices, THIRD_PARTY_NOTICES.md and the full licence texts in the folder
+   licenses/, are in this repository too, and the app shows them offline under About > Licences.
+   screenshots/ holds pictures of Meddeb's interface. The Qur'an text, the page layout and the tajweed
+   colours seen in them are not Meddeb's work: they stay under their own terms (Tanzil, QUL and
+   Quran.com, THIRD_PARTY_NOTICES.md section 1), and the Meddeb licence grants no right in them.
 
 2. models/fastconformer_quran/ is not Meddeb's work and the Meddeb licence does not apply to it:
    - the speech model fastconformer-quran by Muno459 / Quran-Lab

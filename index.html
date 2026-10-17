@@ -17,6 +17,60 @@ marks the words you missed or changed. The speech recognition runs on your own p
 the device, and there is no account.</p>
 <p>The automatic feedback can be wrong: it is help for your practice, not a ruling. Every verdict can be replayed
 from your own recording and corrected in one tap.</p>
+
+<section class="shots" aria-labelledby="shotsTitle">
+<h2 id="shotsTitle">See it in the app</h2>
+<div id="shotsTrack" class="shots-track" tabindex="0" role="region" aria-roledescription="carousel" aria-label="Screenshots of Meddeb for Android">
+  <figure class="shot" role="group" aria-roledescription="slide" aria-label="1 of 6">
+    <img src="screenshots/01_recite.webp" width="540" height="1200" decoding="async" fetchpriority="high"
+      alt="The mushaf page in Hidden mode during a recitation: the words already recited are shown, the rest are grey boxes.">
+    <figcaption><b>Recite from memory</b> Meddeb follows you word by word on the mushaf page; in Hidden mode, each word appears as you say it.</figcaption>
+  </figure>
+  <figure class="shot" role="group" aria-roledescription="slide" aria-label="2 of 6">
+    <img src="screenshots/02_mistakes.webp" width="540" height="1200" decoding="async" loading="lazy"
+      alt="A skipped word shown in red, with its window open: the expected word, the verdict, and buttons to play the recording and correct it.">
+    <figcaption><b>Mistakes caught</b> A skipped or changed word turns red: tap it to hear your own recording and correct the verdict in one tap.</figcaption>
+  </figure>
+  <figure class="shot" role="group" aria-roledescription="slide" aria-label="3 of 6">
+    <img src="screenshots/03_summary.webp" width="540" height="1200" decoding="async" loading="lazy"
+      alt="The summary at the end of a session: the score and the list of mistakes, with buttons to go to older sessions.">
+    <figcaption><b>A summary after each session</b> Your score and every mistake in one list, with your past sessions one tap away.</figcaption>
+  </figure>
+  <figure class="shot" role="group" aria-roledescription="slide" aria-label="4 of 6">
+    <img src="screenshots/04_offline.webp" width="540" height="1200" decoding="async" loading="lazy"
+      alt="A recitation in progress with the phone in airplane mode: the airplane icon is in the status bar.">
+    <figcaption><b>Offline and private</b> After a one-time model download, the recognition runs on your phone, even in airplane mode: no account, and your voice never leaves the phone.</figcaption>
+  </figure>
+  <figure class="shot" role="group" aria-roledescription="slide" aria-label="5 of 6">
+    <img src="screenshots/05_progress.webp" width="540" height="1200" decoding="async" loading="lazy"
+      alt="The Stats page: ayat learned today and overall, the weekly pace and a chart of the progress day by day.">
+    <figcaption><b>Your progress</b> The ayat you learned today and overall, your weekly pace, and a chart of your progress day by day.</figcaption>
+  </figure>
+  <figure class="shot" role="group" aria-roledescription="slide" aria-label="6 of 6">
+    <img src="screenshots/06_listen.webp" width="540" height="1200" decoding="async" loading="lazy"
+      alt="The Listen page playing the recitation of the weakest page, with the choice of what to play and how many times.">
+    <figcaption><b>Listen</b> Yasser Al-Dossary recites your weakest page, the next ayah to learn or your manzil, as often as you like, with the screen off or in the car.</figcaption>
+  </figure>
+</div>
+<div class="shots-nav" id="shotsNav" hidden>
+  <button type="button" class="arrow" id="shotsPrev" aria-controls="shotsTrack" aria-label="Previous screenshot">&#8249;</button>
+  <span class="dots">
+    <button type="button" class="dot" aria-controls="shotsTrack" aria-label="Screenshot 1: Recite from memory" aria-current="true"></button>
+    <button type="button" class="dot" aria-controls="shotsTrack" aria-label="Screenshot 2: Mistakes caught"></button>
+    <button type="button" class="dot" aria-controls="shotsTrack" aria-label="Screenshot 3: A summary after each session"></button>
+    <button type="button" class="dot" aria-controls="shotsTrack" aria-label="Screenshot 4: Offline and private"></button>
+    <button type="button" class="dot" aria-controls="shotsTrack" aria-label="Screenshot 5: Your progress"></button>
+    <button type="button" class="dot" aria-controls="shotsTrack" aria-label="Screenshot 6: Listen"></button>
+  </span>
+  <button type="button" class="play" id="shotsPause" aria-controls="shotsTrack">Pause</button>
+  <button type="button" class="arrow" id="shotsNext" aria-controls="shotsTrack" aria-label="Next screenshot">&#8250;</button>
+</div>
+<span class="sr-only" id="shotsStatus" aria-live="polite"></span>
+<p class="muted credit">Meddeb 0.12 for Android with a demo profile. Qur'an text: <a href="https://tanzil.net">Tanzil
+Project</a> (CC BY 3.0, unchanged); page layout and tajweed colours: QUL (Tarteel) and Quran.com; see the
+<a href="https://github.com/Karim-53/Meddeb/blob/main/THIRD_PARTY_NOTICES.md">third-party notices</a>.</p>
+</section>
+
 <p class="muted">Status: the Android app is in testing (<a href="download.html">download</a>); the browser version will be
 published here.</p>
 
@@ -29,5 +83,58 @@ published here.</p>
   <li><a href="https://github.com/Karim-53/Meddeb/blob/main/LICENSE.md">Licences: Meddeb No-Profit License (draft), speech model and credits</a></li>
 </ul>
 </main>
+<script>
+// The screenshots slideshow (P5.17): ‹ ›, dots, swipe (scroll-snap), arrow keys. It moves on by itself every 6 s until
+// Pause or any manual move, holds while pointed at or focused, and never moves by itself under prefers-reduced-motion.
+(() => {
+  const track = document.getElementById('shotsTrack'), nav = document.getElementById('shotsNav');
+  const slides = track.querySelectorAll('.shot'), dots = nav.querySelectorAll('.dot');
+  const pause = document.getElementById('shotsPause'), status = document.getElementById('shotsStatus');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const n = slides.length;
+  let i = 0, heading = -1, held = false, playing = false, timer = 0;
+  const say = k => { status.textContent = `Screenshot ${k + 1} of ${n}: ${slides[k].querySelector('b').textContent}`; };
+  const mark = k => { i = k; dots.forEach((d, j) => j === k ? d.setAttribute('aria-current', 'true') : d.removeAttribute('aria-current')); };
+  function go(k, user) {
+    k = (k + n) % n;
+    const far = Math.abs(k - i) > 1;                       // the wrap from 6 to 1: no smooth trip past every slide
+    heading = k;
+    track.scrollTo({left: k * track.clientWidth, behavior: reduce.matches || far ? 'instant' : 'smooth'});
+    mark(k);
+    if (user) { setPlaying(false); say(k); }
+  }
+  function setPlaying(on) {
+    playing = on && !reduce.matches;
+    pause.textContent = playing ? 'Pause' : 'Play';
+    pause.setAttribute('aria-label', playing ? 'Pause the slideshow' : 'Play the slideshow');
+    clearInterval(timer);
+    timer = playing ? setInterval(() => { if (!held && !document.hidden) go(i + 1); }, 6000) : 0;
+  }
+  document.getElementById('shotsPrev').onclick = () => go(i - 1, true);
+  document.getElementById('shotsNext').onclick = () => go(i + 1, true);
+  dots.forEach((d, j) => { d.onclick = () => go(j, true); });
+  pause.onclick = () => setPlaying(!playing);
+  track.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); go(i + (e.key === 'ArrowRight' ? 1 : -1), true); }
+  });
+  let raf = 0;                                             // a swipe: the dots follow and the slideshow stops
+  track.addEventListener('scroll', () => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      const k = Math.round(track.scrollLeft / track.clientWidth);
+      if (heading >= 0) { if (k === heading) heading = -1; return; }   // our own scrollTo on its way
+      if (k !== i) { mark(k); setPlaying(false); say(k); }
+    });
+  }, {passive: true});
+  for (const [ev, on] of [['pointerenter', true], ['pointerleave', false], ['focusin', true], ['focusout', false]]) {
+    for (const el of [track, nav]) el.addEventListener(ev, () => { held = on; });
+  }
+  reduce.addEventListener('change', () => { pause.hidden = reduce.matches; setPlaying(false); });
+  pause.hidden = reduce.matches;
+  track.classList.add('js');
+  nav.hidden = false;
+  setPlaying(true);
+})();
+</script>
 </body>
 </html>

@@ -7,7 +7,8 @@ The components below are not Meddeb's work. Each one is used under its own licen
 in force for it; nothing in the Meddeb licence limits the rights that those licences give you. The full
 licence texts are in the folder licenses/ next to this file; each entry names its file.
 
-Checked on 2026-10-01 for the Android app 0.5, the PC app and the web repository.
+Checked on 2026-10-01 for the Android app 0.5, the PC app and the web repository; section 1 and the build
+and test tools updated on 2026-10-17 (0.12) for the website's screenshots.
 
 Where a component ships:
 
@@ -40,7 +41,9 @@ Contents
 - Source: https://tanzil.net (updates: http://tanzil.net/updates/)
 - Ships in: Android app and PC app. Meddeb displays the Uthmani text; the Simple texts are the reference
   for the speech recognition. The PC app reads the three files (recite/data/quran_*.txt); the apps carry
-  the word tables built from them (recite/data/quran_words.json.gz).
+  the word tables built from them (recite/data/quran_words.json.gz). Web: pictures of mushaf pages in
+  screenshots/ (the Uthmani text as the app shows it, unchanged), credited with a link to tanzil.net
+  next to them (index.html, README.md).
 - Licence text: licenses/tanzil_quran_text.txt (the copyright block of each file, verbatim; in the
   source repository also recite/data/TANZIL_NOTICE.txt); CC BY 3.0:
   https://creativecommons.org/licenses/by/3.0/
@@ -97,7 +100,8 @@ Contents
 - Source: https://quran.com , https://api.quran.com/api/v4 ; developer terms:
   https://api-docs.quran.foundation/legal/developer-terms/
 - Ships in: Android app and PC app (recite/data/quran_tajweed.json: the tajweed colours;
-  recite/data/chapters.json: surah names and ayah counts)
+  recite/data/chapters.json: surah names and ayah counts). Web: the tajweed colours in the pictures of
+  screenshots/, credited next to them
 - Licence text: none published; the Quran Foundation developer terms above apply.
 - Notes: credit: Quran.com / Quran Foundation. The Meddeb licence grants no right in this data.
 
@@ -108,7 +112,7 @@ Contents
 - Copyright: Quranic Universal Library (QUL, Tarteel) / Quran.com
 - Source: https://qul.tarteel.ai , https://api.qurancdn.com
 - Ships in: Android app and PC app (recite/data/mushaf_lines.json: which words sit on which line of the
-  604 pages)
+  604 pages). Web: the page layout in the pictures of screenshots/, credited next to them
 - Licence text: none published. QUL states that the licence differs per resource
   (https://qul.tarteel.ai/faq); the Quran Foundation developer terms apply to the API.
 - Notes: credit: QUL (Tarteel) and Quran.com. The Meddeb licence grants no right in this data.
@@ -508,13 +512,16 @@ notices, and the obligations of the LGPL libraries below, must ship with it.
 ### Build and test tools
 
 - Version: Gradle 8.14.5, Android Gradle Plugin 8.13.2, Kotlin compiler 2.3.21, JDK 21, Android SDK
-  (compile SDK 36, build-tools 36.1.0); JUnit 4.13.2 and org.json 20260814 (JVM unit tests only); pytest
+  (compile SDK 36, build-tools 36.1.0); the Android Emulator with its Android 16 Google APIs x86_64 system
+  image (emulator tests, the website's screenshots); JUnit 4.13.2 and org.json 20260814 (JVM unit tests
+  only); pytest; Pillow 12.3.0 (tools/make_icons.py, tools/make_screenshots.py)
 - SPDX: Apache-2.0 (Gradle, Android Gradle Plugin, Kotlin); GPL-2.0-only WITH Classpath-exception-2.0
-  (OpenJDK); Android Software Development Kit License Agreement; EPL-1.0 (JUnit 4); public domain
-  (org.json); MIT (pytest)
+  (OpenJDK); Android Software Development Kit License Agreement (SDK, emulator, system image); EPL-1.0
+  (JUnit 4); public domain (org.json); MIT (pytest); MIT-CMU (Pillow)
 - Copyright: their authors
 - Source: https://gradle.org , https://developer.android.com/studio , https://openjdk.org ,
-  https://junit.org/junit4/ , https://github.com/stleary/JSON-java , https://pytest.org
+  https://junit.org/junit4/ , https://github.com/stleary/JSON-java , https://pytest.org ,
+  https://python-pillow.github.io
 - Ships in: dev only (used to build and test; not inside the apps)
 - Licence text: licenses/apache_2_0.txt (Gradle, Android Gradle Plugin, Kotlin); the others with each tool
 
