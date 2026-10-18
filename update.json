@@ -1,18 +1,24 @@
 {
  "format": 1,
  "app_id": "io.github.karim53.meddeb",
- "version_code": 11,
- "version_name": "0.11",
- "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.11/meddeb_v0.11.apk",
- "size": 73736257,
- "sha256": "84f624a725d3848c3c2499da5ee7e8c931abd8af96872b220c834561628e4e20",
+ "version_code": 12,
+ "version_name": "0.12",
+ "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.12/meddeb_v0.12.apk",
+ "size": 73819017,
+ "sha256": "56b38d0e2ac6441baeb8677eaf9fffdebbe01077ad600916a200b29330c3cd74",
  "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
  "min_sdk": 26,
  "min_version_code": 0,
- "released": "2026-10-15",
+ "released": "2026-10-18",
  "notes": [
-  "Change: an ayah counts as learned only once recited entirely without any mistake or hint.",
-  "Fix: the page's mistakes pill follows the page shown when you swipe."
+  "New: a Stats page (today, overall, a chart over time, pace and finish date); Progress shows today's three to-dos as check boxes.",
+  "New: double tap a word to mark it as a mistake, or to remove its mistake; double tap again to undo.",
+  "New: shake the phone to report a problem (Settings, off by default); the report button moved into the menu.",
+  "New: Android Auto: a Pages tab (first page, last page, repeats), Recite buttons, Find where I am, and the ayah's text on screen.",
+  "Change: in the car, Listen and Recite take over a recitation running on the phone; it is saved first.",
+  "Fix: no more empty hidden word where one written word is said as two (for example ya bunayya, ya ayyuha).",
+  "Fix: + Mistake, + Correct and Remove mistake now colour the word at once.",
+  "Fix: Hidden and Blind always show the Recite buttons, and a Listen button with a cross leaves Listen."
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html"
 }
