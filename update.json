@@ -1,24 +1,21 @@
 {
  "format": 1,
  "app_id": "io.github.karim53.meddeb",
- "version_code": 12,
- "version_name": "0.12",
- "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.12/meddeb_v0.12.apk",
- "size": 73819017,
- "sha256": "56b38d0e2ac6441baeb8677eaf9fffdebbe01077ad600916a200b29330c3cd74",
+ "version_code": 13,
+ "version_name": "0.13",
+ "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.13/meddeb_v0.13.apk",
+ "size": 73839021,
+ "sha256": "43aebaad71f1c34b111f61cfbc1f200b5acf0765cf0d55a839e690685760ad60",
  "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
  "min_sdk": 26,
  "min_version_code": 0,
- "released": "2026-10-18",
+ "released": "2026-10-20",
  "notes": [
-  "New: a Stats page (today, overall, a chart over time, pace and finish date); Progress shows today's three to-dos as check boxes.",
-  "New: double tap a word to mark it as a mistake, or to remove its mistake; double tap again to undo.",
-  "New: shake the phone to report a problem (Settings, off by default); the report button moved into the menu.",
-  "New: Android Auto: a Pages tab (first page, last page, repeats), Recite buttons, Find where I am, and the ayah's text on screen.",
-  "Change: in the car, Listen and Recite take over a recitation running on the phone; it is saved first.",
-  "Fix: no more empty hidden word where one written word is said as two (for example ya bunayya, ya ayyuha).",
-  "Fix: + Mistake, + Correct and Remove mistake now colour the word at once.",
-  "Fix: Hidden and Blind always show the Recite buttons, and a Listen button with a cross leaves Listen."
+  "New: Android Auto plays the travel dua (Az-Zukhruf 43:13-14) and the ta'awwudh before your last listening (once a drive).",
+  "New: Stats lets you choose the pace's period: since the beginning, the last 4 weeks or the last 7 days.",
+  "Fix: the page shows the mushaf's exact letters (the small alif was drawn as a full alif with a hamza).",
+  "Change: Blind shows an ayah's number with the next ayah's first word; a tapped word's details wait for a double tap.",
+  "Change: Send feedback in the menu, a shorter About page, no dot on the menu, and a faster start in the car."
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html"
 }
