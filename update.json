@@ -1,20 +1,25 @@
 {
  "format": 1,
  "app_id": "io.github.karim53.meddeb",
- "version_code": 14,
- "version_name": "0.14",
- "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.14/meddeb_v0.14.apk",
- "size": 73855441,
- "sha256": "b9575a0e12088f144fe7486cc09fd4a0bb898409ce93fddc9d2a666d778bcc98",
+ "version_code": 15,
+ "version_name": "0.15",
+ "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.15/meddeb_v0.15.apk",
+ "size": 73919253,
+ "sha256": "8acce94d95b79a2d0f1960b05588dbb159c7c51d29737ed5d525f52a82bbd6af",
  "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
  "min_sdk": 26,
  "min_version_code": 0,
- "released": "2026-10-21",
+ "released": "2026-10-24",
  "notes": [
-  "Fix: the car now shows the Qur'an text on its playing screen, larger for short ayat (some cars showed a music note).",
-  "Change: in the car, Listen starts with Last played (what you listened to last); the Pages tab is gone.",
-  "Fix: in the car, Recite shows why it cannot start (for example when the speech model is missing).",
-  "Fix: in the car, Play on a finished listening starts it again from the beginning (it replayed only the last ayah)."
+  "New: Listen can vary where each repeated play starts and ends (up to 4 ayat), fade out inside the extra ayah, and pause between plays.",
+  "New: Settings > Updates > Auto update on Wi-Fi (off by default); the Settings page is now grouped in sections.",
+  "New: in Blind mode, pull down on an empty page to see the end of the page before, just enough to know where you are.",
+  "New: the replay voice command before your first word plays the ayah before, or says the surah's name.",
+  "New: in the car, Recite plays the ayah before (or says the surah's name) when it starts.",
+  "New: the Progress table names the surah of each page.",
+  "Fix: starting to recite in the middle of a page is followed, also after a link of the Progress page.",
+  "Fix: Play word and Play ayah replay the right part after a word marked \"lost\".",
+  "Change: a double tap on an old mistake adds a new one; it removes only a mistake of this session or one you just added."
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html"
 }
