@@ -47,9 +47,10 @@ async function status() {
 }
 
 async function fetchPart(url, onBytes) {
+  // no Content-Length check: GitHub Pages gzips the parts (the header is the compressed size, the body arrives
+  // decompressed, 2026-10-25); the manifest's size and SHA-256 decide
   const resp = await fetch(url, {cache: 'no-store'});
   if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText} for ${url.split('/').pop()}`);
-  const len = +resp.headers.get('Content-Length') || 0;
   const reader = resp.body.getReader();
   const chunks = []; let n = 0;
   for (;;) {
@@ -59,7 +60,6 @@ async function fetchPart(url, onBytes) {
   }
   const out = new Uint8Array(n); let o = 0;
   for (const c of chunks) { out.set(c, o); o += c.length; }
-  if (len && n !== len) throw new Error(`incomplete download of ${url.split('/').pop()} (${n} of ${len} bytes)`);
   return out;
 }
 
