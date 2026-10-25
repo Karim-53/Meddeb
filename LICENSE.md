@@ -4,8 +4,11 @@ This repository (https://github.com/Karim-53/Meddeb, the website https://karim-5
 two kinds of material, under different licences.
 
 1. The website and the repository's own files (index.html, privacy.html, impressum.html, site.css,
-   favicon.svg, README.md, screenshots/, .github/): Copyright (c) 2026 Mohamed Karim Belaid, licensed
-   under the Meddeb No-Profit License 1.0 (draft), reproduced below. The Meddeb app is under the same
+   favicon.svg, README.md, screenshots/, .github/) and the web app in app/ (Meddeb's page and engine, exported
+   from the Meddeb source): Copyright (c) 2026 Mohamed Karim Belaid, licensed under the Meddeb No-Profit
+   License 1.0 (draft), reproduced below. app/vendor/ (Pyodide with CPython and NumPy, onnxruntime-web) and the
+   Qur'an data, fonts and model files inside app/ are not Meddeb's work: they stay under their own licences
+   (THIRD_PARTY_NOTICES.md sections 1, 2, 4 and 7). The Meddeb app is under the same
    licence. Its third-party notices, THIRD_PARTY_NOTICES.md and the full licence texts in the folder
    licenses/, are in this repository too, and the app shows them offline under About > Licences.
    screenshots/ holds pictures of Meddeb's interface. The Qur'an text, the page layout and the tajweed

@@ -15,6 +15,7 @@ Where a component ships:
 - Android app: inside the APK of Meddeb for Android.
 - Android app, downloaded: fetched by the Android app when needed, not inside the APK.
 - Web: in the public repository https://github.com/Karim-53/Meddeb (site: https://karim-53.github.io/Meddeb/).
+- Web app: the browser version at https://karim-53.github.io/Meddeb/app/ (files under app/ of that repository).
 - PC app: the PC version, run from the source repository on the user's own computer.
 - Dev only: used to build, test or evaluate Meddeb; never shipped.
 
@@ -26,9 +27,10 @@ Contents
 4. Fonts
 5. Android app: Java and Kotlin libraries
 6. Android app: Python (Chaquopy)
-7. PC app: Python packages and fallback models (not redistributed)
-8. Development only
-9. Files in licenses/
+7. Web app: Python, NumPy and the speech model's runtime in the browser
+8. PC app: Python packages and fallback models (not redistributed)
+9. Development only
+10. Files in licenses/
 
 
 ## 1. Qur'an text and data
@@ -39,7 +41,7 @@ Contents
 - SPDX: CC-BY-3.0, with Tanzil's terms of use (verbatim copies only)
 - Copyright: Copyright (C) 2007-2026 Tanzil Project
 - Source: https://tanzil.net (updates: http://tanzil.net/updates/)
-- Ships in: Android app and PC app. Meddeb displays the Uthmani text; the Simple texts are the reference
+- Ships in: Android app, web app and PC app. Meddeb displays the Uthmani text; the Simple texts are the reference
   for the speech recognition. The PC app reads the three files (recite/data/quran_*.txt); the apps carry
   the word tables built from them (recite/data/quran_words.json.gz). Web: pictures of mushaf pages in
   screenshots/ (the Uthmani text as the app shows it, unchanged), credited with a link to tanzil.net
@@ -87,7 +89,7 @@ Contents
 - SPDX: CC-BY-3.0
 - Copyright: Copyright (C) 2008-2009 Tanzil.info
 - Source: https://tanzil.net/res/text/metadata/quran-data.js
-- Ships in: Android app and PC app (recite/data/mushaf_meta.json: page, juz and hizb-quarter boundaries;
+- Ships in: Android app, web app and PC app (recite/data/mushaf_meta.json: page, juz and hizb-quarter boundaries;
   adapted: converted to JSON, other tables left out)
 - Licence text: licenses/tanzil_quran_text.txt (the file's header, verbatim); CC BY 3.0:
   https://creativecommons.org/licenses/by/3.0/
@@ -99,7 +101,7 @@ Contents
 - Copyright: Quran.com / Quran Foundation
 - Source: https://quran.com , https://api.quran.com/api/v4 ; developer terms:
   https://api-docs.quran.foundation/legal/developer-terms/
-- Ships in: Android app and PC app (recite/data/quran_tajweed.json: the tajweed colours;
+- Ships in: Android app, web app and PC app (recite/data/quran_tajweed.json: the tajweed colours;
   recite/data/chapters.json: surah names and ayah counts). Web: the tajweed colours in the pictures of
   screenshots/, credited next to them
 - Licence text: none published; the Quran Foundation developer terms above apply.
@@ -111,7 +113,7 @@ Contents
 - SPDX: NOASSERTION (no licence is published for this data)
 - Copyright: Quranic Universal Library (QUL, Tarteel) / Quran.com
 - Source: https://qul.tarteel.ai , https://api.qurancdn.com
-- Ships in: Android app and PC app (recite/data/mushaf_lines.json: which words sit on which line of the
+- Ships in: Android app, web app and PC app (recite/data/mushaf_lines.json: which words sit on which line of the
   604 pages). Web: the page layout in the pictures of screenshots/, credited next to them
 - Licence text: none published. QUL states that the licence differs per resource
   (https://qul.tarteel.ai/faq); the Quran Foundation developer terms apply to the API.
@@ -127,8 +129,8 @@ Contents
 - SPDX: LicenseRef-NPL-1.1 (Quran-Lab No-Profit License 1.1)
 - Copyright: Copyright (c) 2026 Muno459 / Quran-Lab
 - Source: https://huggingface.co/Muno459/fastconformer-quran
-- Ships in: Android app (tokens.txt and the licence file); Android app, downloaded (model.q8.onnx, fetched
-  from the web repository at the first microphone press); Web (models/fastconformer_quran/: model.q8.onnx
+- Ships in: Android app and web app (tokens.txt and the licence file); Android app and web app, downloaded
+  (model.q8.onnx, fetched from the web repository at the first microphone press); Web (models/fastconformer_quran/: model.q8.onnx
   in 3 parts, with the licence file); PC app (downloaded from Hugging Face by tools/get_models.py)
 - Licence text: licenses/npl_1_1_fastconformer_quran.txt (the same file travels with the model as LICENSE)
 - Notes: NPL-1.1 forbids any profit by an application or service that includes the model (§3) and says that
@@ -159,8 +161,8 @@ Contents
 - Source: https://everyayah.com/data/Yasser_Ad-Dussary_128kbps/ (served through the BunnyCDN network)
 - Ships in: not in the APK nor in any Meddeb repository. Android app, downloaded: Listen and the voice
   commands store the ayat they play (Listen also the rest of that surah, fetched on an unmetered network) in
-  the app's own storage, for the user's own offline listening. PC app: played from EveryAyah directly (the
-  browser may cache them).
+  the app's own storage, for the user's own offline listening. PC app and web app: played from EveryAyah
+  directly (the browser may cache them).
 - Licence text: none bundled; CC BY-NC 2.5 Canada: https://creativecommons.org/licenses/by-nc/2.5/ca/
   (archived licence page:
   http://web.archive.org/web/20121021062917/http://www.versebyversequran.com/site/license)
@@ -177,7 +179,7 @@ Contents
   VerseByVerseQuran.com) with fastconformer-quran by Muno459 / Quran-Lab
 - Source: tools/build_word_timings.py (source repository) over
   https://everyayah.com/data/Yasser_Ad-Dussary_128kbps/
-- Ships in: Android app (recite/data/yasser_word_timings.json.gz, about 0.2 MB) and PC app (source
+- Ships in: Android app and web app (recite/data/yasser_word_timings.json.gz, about 0.2 MB) and PC app (source
   repository). No audio: the start of every word inside each ayah file, in centiseconds, which the voice
   commands use to play the reciter's word, the rest of the ayah or the ayah up to the cursor (X2.15).
 - Licence text: licenses/npl_1_1_fastconformer_quran.txt (the model's licence, under which the file is shipped);
@@ -201,7 +203,7 @@ sold by themselves.
 - SPDX: OFL-1.1
 - Copyright: Copyright 2010-2022 The Amiri Quran Project Authors (https://github.com/aliftype/amiri)
 - Source: https://github.com/aliftype/amiri , https://fonts.google.com/specimen/Amiri+Quran
-- Ships in: Android app, PC app (the Qur'anic text)
+- Ships in: Android app, web app, PC app (the Qur'anic text)
 - Licence text: licenses/ofl_amiri_quran.txt
 
 ### Noto Naskh Arabic
@@ -210,7 +212,7 @@ sold by themselves.
 - SPDX: OFL-1.1
 - Copyright: Copyright 2022 The Noto Project Authors (https://github.com/notofonts/arabic)
 - Source: https://github.com/notofonts/arabic , https://fonts.google.com/noto/specimen/Noto+Naskh+Arabic
-- Ships in: Android app, PC app (Arabic labels)
+- Ships in: Android app, web app, PC app (Arabic labels)
 - Licence text: licenses/ofl_noto_naskh_arabic.txt
 
 ### Inter
@@ -219,7 +221,7 @@ sold by themselves.
 - SPDX: OFL-1.1
 - Copyright: Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
 - Source: https://github.com/rsms/inter , https://fonts.google.com/specimen/Inter
-- Ships in: Android app, PC app (the interface)
+- Ships in: Android app, web app, PC app (the interface)
 - Licence text: licenses/ofl_inter.txt
 
 
@@ -232,7 +234,7 @@ sold by themselves.
 - Copyright: Copyright (c) Microsoft Corporation
 - Source: https://github.com/microsoft/onnxruntime (tag v1.30.0)
 - Ships in: Android app (libonnxruntime.so, libonnxruntime4j_jni.so and the Java API); PC app (the pip
-  package onnxruntime 1.30.0, see section 7)
+  package onnxruntime 1.30.0, see section 8); the web app: onnxruntime-web (section 7)
 - Licence text: licenses/mit_onnxruntime.txt; ONNX Runtime's own third-party notices (protobuf,
   flatbuffers, Eigen, abseil, ONNX and others): licenses/onnxruntime_third_party_notices.txt; the file
   META-INF/LICENSE-1DS that comes with its Java package is the Apache License 2.0 (licenses/apache_2_0.txt)
@@ -385,7 +387,7 @@ Copyright 2016-2021 JetBrains s.r.o and respective authors and developers
 - SPDX: BSD-3-Clause (bundled code: lapack-lite BSD-3-Clause, dragon4 MIT, libdivide Zlib)
 - Copyright: Copyright (c) 2005-2023, NumPy Developers
 - Source: https://numpy.org , https://github.com/numpy/numpy (tag v1.26.2)
-- Ships in: Android app. The PC app uses the pip package numpy 2.5.3 (section 7).
+- Ships in: Android app. The PC app uses the pip package numpy 2.5.3 (section 8); the web app NumPy 2.4.6 (section 7).
 - Licence text: licenses/numpy_1_26_2.txt
 
 ### OpenBLAS
@@ -434,7 +436,86 @@ Copyright 2016-2021 JetBrains s.r.o and respective authors and developers
 - Licence text: licenses/chaquopy_bootstrap_packages.txt; licenses/apache_2_0.txt (importlib_resources)
 
 
-## 7. PC app: Python packages and fallback models (not redistributed)
+## 7. Web app: Python, NumPy and the speech model's runtime in the browser
+
+Added on 2026-10-25 for the web app (issue #37). The web app runs the same Python engine as the Android app in
+Pyodide and the same speech model (section 2, downloaded at the first recitation like the phone's) in
+onnxruntime-web; the page's own code is Meddeb's (LICENSE.md). The fonts (section 4), the Qur'an data
+(section 1) and the recitation audio (section 3) are the same as on the phone.
+
+### Pyodide
+
+- Version: 314.0.7
+- SPDX: MPL-2.0
+- Copyright: Copyright (c) 2019-2026 the Pyodide contributors (the project began at Mozilla)
+- Source: https://pyodide.org , https://github.com/pyodide/pyodide (tag 314.0.7)
+- Ships in: Web app (app/vendor/pyodide/: pyodide.mjs, pyodide.asm.mjs, pyodide.asm.wasm, python_stdlib.zip,
+  pyodide-lock.json), unmodified
+- Licence text: licenses/mpl_2_0.txt; the JavaScript libraries bundled in pyodide.mjs (error-stack-parser,
+  stackframe: MIT): licenses/mit_stacktracejs.txt; the Emscripten runtime compiled into it:
+  licenses/emscripten_runtime.txt
+- Notes: the files are Pyodide's own release files, the Source Code Form is at the tag above (MPL-2.0 section 3.2).
+
+### CPython (in Pyodide)
+
+- Version: 3.14.2 (Pyodide's WebAssembly build: the interpreter in pyodide.asm.wasm, the standard library in
+  python_stdlib.zip)
+- SPDX: PSF-2.0
+- Copyright: Copyright (c) 2001 Python Software Foundation; All Rights Reserved (the full notice is in the licence
+  text)
+- Source: https://www.python.org , https://github.com/python/cpython (tag v3.14.2)
+- Ships in: Web app
+- Licence text: licenses/psf_2_0_cpython_3_14.txt; the software incorporated in CPython (expat, libffi, libmpdec,
+  zlib, HACL*, SipHash, dtoa and others): licenses/cpython_3_14_incorporated_software.txt
+
+### Libraries built into Pyodide's Python
+
+- Version: the versions in Pyodide 314.0.7: zlib, bzip2 (module _bz2), SQLite (module _sqlite3), libffi (module
+  _ctypes), expat and libmpdec (the copies in CPython 3.14.2)
+- SPDX: Zlib (zlib); bzip2-1.0.6 (bzip2); blessing (SQLite, public domain); MIT (libffi, expat); BSD-2-Clause
+  (libmpdec)
+- Copyright: zlib: Jean-loup Gailly and Mark Adler; bzip2: Julian R Seward; SQLite: public domain; libffi:
+  Anthony Green, Red Hat, Inc. and others; expat: Thai Open Source Software Center Ltd, Clark Cooper and the Expat
+  maintainers; libmpdec: Stefan Krah
+- Source: https://zlib.net , https://sourceware.org/bzip2/ , https://sqlite.org , https://sourceware.org/libffi/ ,
+  https://libexpat.github.io , https://www.bytereef.org/mpdecimal/
+- Ships in: Web app (inside pyodide.asm.wasm)
+- Licence text: licenses/cpython_3_14_incorporated_software.txt (zlib, libffi, expat, libmpdec). SQLite is in the
+  public domain; the bzip2 licence asks only source copies to keep its notice (https://sourceware.org/bzip2/).
+
+### NumPy (in Pyodide)
+
+- Version: 2.4.6 (Pyodide's build, numpy-2.4.6-cp314-cp314-pyemscripten_2026_0_wasm32.whl)
+- SPDX: BSD-3-Clause (bundled code: lapack-lite BSD-3-Clause, pocketfft BSD-3-Clause, dragon4 MIT, libdivide Zlib,
+  Highway Apache-2.0 OR BSD-3-Clause, the random generators' MIT / BSD-3-Clause / NCSA, others in the text)
+- Copyright: Copyright (c) 2005-2025, NumPy Developers
+- Source: https://numpy.org , https://github.com/numpy/numpy (tag v2.4.6)
+- Ships in: Web app (app/vendor/pyodide/)
+- Licence text: licenses/numpy_2_4_6_pyodide.txt
+
+### onnxruntime-web
+
+- Version: 1.30.0 (npm package onnxruntime-web: ort.wasm.min.mjs, ort-wasm-simd-threaded.mjs,
+  ort-wasm-simd-threaded.wasm)
+- SPDX: MIT
+- Copyright: Copyright (c) Microsoft Corporation
+- Source: https://github.com/microsoft/onnxruntime (tag v1.30.0, js/web)
+- Ships in: Web app (app/vendor/ort/), unmodified
+- Licence text: licenses/mit_onnxruntime.txt; ONNX Runtime's own third-party notices (protobuf, flatbuffers,
+  Eigen, abseil, ONNX and others): licenses/onnxruntime_third_party_notices.txt; the Emscripten runtime compiled
+  into it: licenses/emscripten_runtime.txt; LLVM libc++: licenses/libcxx_apache_2_0_llvm_exception.txt
+
+### Emscripten runtime and musl libc
+
+- Version: Emscripten 5.0.3 (Pyodide's platform emscripten_5_0_3) and the Emscripten version onnxruntime-web 1.30.0
+  is built with
+- SPDX: MIT OR NCSA (Emscripten); MIT (musl)
+- Copyright: Copyright (c) 2010-2014 Emscripten authors; musl: Copyright (c) 2005-2020 Rich Felker, et al.
+- Source: https://github.com/emscripten-core/emscripten (tag 5.0.3)
+- Ships in: Web app (compiled into pyodide.asm.* and ort-wasm-simd-threaded.*)
+- Licence text: licenses/emscripten_runtime.txt
+
+## 8. PC app: Python packages and fallback models (not redistributed)
 
 The PC app runs from the source repository with Python 3.12 and packages that the user installs from PyPI
 (requirements.txt). Meddeb does not redistribute them. If a PC bundle (an installer) is ever made, these
@@ -477,7 +558,7 @@ notices, and the obligations of the LGPL libraries below, must ship with it.
 - Licence text: licenses/apache_2_0.txt; the MIT texts are in the model repositories
 
 
-## 8. Development only
+## 9. Development only
 
 ### Quran-Lab Quranic ASR benchmark
 
@@ -526,7 +607,7 @@ notices, and the obligations of the LGPL libraries below, must ship with it.
 - Licence text: licenses/apache_2_0.txt (Gradle, Android Gradle Plugin, Kotlin); the others with each tool
 
 
-## 9. Files in licenses/
+## 10. Files in licenses/
 
 - licenses/apache_2_0.txt: Apache License 2.0: AndroidX, Media3, Guava, JSpecify, Kotlin, kotlinx.coroutines,
   OpenSSL, importlib_resources, ONNX Runtime's META-INF/LICENSE-1DS
@@ -543,8 +624,13 @@ notices, and the obligations of the LGPL libraries below, must ship with it.
 - licenses/libgfortran_gcc_runtime_exception.txt: libgfortran (GPL-3.0-or-later WITH GCC-exception-3.1)
 - licenses/gpl_3_0.txt: GNU General Public License v3 (for libgfortran)
 - licenses/libcxx_apache_2_0_llvm_exception.txt: LLVM libc++ (Apache-2.0 WITH LLVM-exception)
+- licenses/psf_2_0_cpython_3_14.txt: CPython 3.14 in Pyodide (PSF License 2.0), web app
+- licenses/cpython_3_14_incorporated_software.txt: software incorporated in CPython 3.14, web app
+- licenses/numpy_2_4_6_pyodide.txt: NumPy 2.4.6 in Pyodide (BSD-3-Clause) and the code it bundles, web app
+- licenses/emscripten_runtime.txt: the Emscripten runtime and musl libc (MIT / NCSA), web app
+- licenses/mit_stacktracejs.txt: error-stack-parser and stackframe bundled in Pyodide (MIT), web app
 - licenses/chaquopy_bootstrap_packages.txt: setuptools, pyelftools and their vendored packages
-- licenses/mpl_2_0.txt: Mozilla Public License 2.0 (Mozilla CA certificates, cacert.pem)
+- licenses/mpl_2_0.txt: Mozilla Public License 2.0 (Mozilla CA certificates, cacert.pem; Pyodide)
 - licenses/ofl_amiri_quran.txt: Amiri Quran font (SIL OFL 1.1)
 - licenses/ofl_noto_naskh_arabic.txt: Noto Naskh Arabic font (SIL OFL 1.1)
 - licenses/ofl_inter.txt: Inter font (SIL OFL 1.1)

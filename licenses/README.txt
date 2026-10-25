@@ -17,8 +17,13 @@ openblas_0_2_20.txt                     OpenBLAS (BSD-3-Clause)
 libgfortran_gcc_runtime_exception.txt   libgfortran (GPL-3.0-or-later WITH GCC-exception-3.1)
 gpl_3_0.txt                             GNU General Public License v3 (for libgfortran)
 libcxx_apache_2_0_llvm_exception.txt    LLVM libc++ (Apache-2.0 WITH LLVM-exception)
+psf_2_0_cpython_3_14.txt                CPython 3.14 in Pyodide, web app (PSF License 2.0)
+cpython_3_14_incorporated_software.txt  software incorporated in CPython 3.14 (expat, libffi, zlib...)
+numpy_2_4_6_pyodide.txt                 NumPy 2.4.6 in Pyodide (BSD-3-Clause) and the code it bundles
+emscripten_runtime.txt                  Emscripten runtime and musl libc (MIT / NCSA), web app
+mit_stacktracejs.txt                    error-stack-parser and stackframe in Pyodide (MIT), web app
 chaquopy_bootstrap_packages.txt         setuptools, pyelftools and their vendored packages
-mpl_2_0.txt                             Mozilla Public License 2.0 (Mozilla CA certificates, cacert.pem)
+mpl_2_0.txt                             Mozilla Public License 2.0 (Mozilla CA certificates, cacert.pem; Pyodide)
 ofl_amiri_quran.txt                     Amiri Quran font (SIL OFL 1.1)
 ofl_noto_naskh_arabic.txt               Noto Naskh Arabic font (SIL OFL 1.1)
 ofl_inter.txt                           Inter font (SIL OFL 1.1)

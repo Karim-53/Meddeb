@@ -1,0 +1,15 @@
+{
+ "name": "Meddeb",
+ "short_name": "Meddeb",
+ "description": "A private Qur'an recitation coach (Hafs): it listens and follows you, in your browser.",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#fbf8f1",
+ "theme_color": "#1f5f4a",
+ "icons": [
+  {"src": "static/icon_192.png", "sizes": "192x192", "type": "image/png"},
+  {"src": "static/icon_512.png", "sizes": "512x512", "type": "image/png"},
+  {"src": "static/icon_maskable_512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+ ]
+}

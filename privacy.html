@@ -10,7 +10,7 @@
 <main>
 <p><a href="./">← Meddeb</a></p>
 <h1>Privacy policy</h1>
-<p class="muted">Last updated: 14 October 2026</p>
+<p class="muted">Last updated: 25 October 2026</p>
 
 <h2>In short</h2>
 <p>Meddeb listens to your recitation <b>on your own device</b>. Your voice, your recordings and your marks are never
@@ -61,6 +61,33 @@ EU General Data Protection Regulation (GDPR) for this website and the Meddeb app
     your recordings, your mistake history or the downloaded recitation audio. Uninstalling the app deletes its
     profile folder and the downloaded recitation audio. You can also delete single session folders from the
     profile.</li>
+</ul>
+
+<h2>The web app (Meddeb in your browser)</h2>
+<p>The web app at <a href="app/">karim-53.github.io/Meddeb/app/</a> does the same as the apps above, inside your
+browser: the speech model and the whole recitation coach run in the page (WebAssembly), on your computer.</p>
+<ul>
+  <li><b>Microphone.</b> The browser asks for your permission; while a session or a search runs, the page records
+    the microphone and turns it into text on your computer. The audio is never uploaded.</li>
+  <li><b>What is stored, and where.</b> Your profile (sessions with their recordings, verdicts, marks, settings) and
+    the speech model are kept in the browser's private storage for this website (the Origin Private File System),
+    on your computer. Other websites cannot read it, and it is never sent anywhere. Settings → Export profile
+    downloads it as a zip (the same file as the Android app's), Import profile reads one back.</li>
+  <li><b>Network.</b> The app's files and, at the first recitation, the speech model come from this website (GitHub
+    Pages); Listen plays the recitation from EveryAyah as described above; when the page shows again it fetches a
+    small file (<code>version.json</code>) from this website, at most every hour, to tell you when a new version is
+    available. The request data of these downloads (your IP address, the files requested) reach GitHub and
+    EveryAyah / BunnyCDN as described above; nothing else is sent, and nothing from your profile.</li>
+  <li><b>Speaking a surah's name.</b> Before a session that starts at a surah's first ayah, the page may say the
+    surah's name with your browser's Arabic voice, and only with a voice that runs on your computer; without one, it
+    plays the reciter's basmala instead.</li>
+  <li><b>Bug reports.</b> ☰ → Send feedback opens a new GitHub issue on
+    <a href="https://github.com/Karim-53/Meddeb/issues">Karim-53/Meddeb</a>, prefilled with the app's version, the
+    browser and system names and the session's name. Nothing is sent until you submit it, and the issue is public
+    (see below).</li>
+  <li><b>Deleting your data.</b> Settings → Space used deletes your recordings or your mistake history; your
+    browser's settings for this site ("Delete data" / "Clear site data") delete the whole profile and the model.
+    Export the profile first if you want to keep it.</li>
 </ul>
 
 <h2>This website</h2>

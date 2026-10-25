@@ -3,13 +3,17 @@
 Meddeb, a local and private Qur'an recitation coach. Website: https://karim-53.github.io/Meddeb/
 
 - `index.html`, `privacy.html`, `impressum.html`, `site.css`, `favicon.svg` - the GitHub Pages site (served from `main`, root).
+- `app/` - **Meddeb in your browser**: https://karim-53.github.io/Meddeb/app/ (Chrome on a computer). The
+  same page and Python engine as the Android app, run by Pyodide and onnxruntime-web in the browser; exported from
+  the private dev repository by `tools/export_app.py --target web` (`EXPORTED_FROM.json` lists every exported file:
+  change them there, not here; `tools/check_exported.py` checks it).
 - `screenshots/` - the pictures of Meddeb for Android shown on the site and below (made on the emulator with a demo
   profile by the private dev repo's `tools/make_screenshots.py`).
 - `download.html` - the Android download page; `update.json` - what the Android app checks for its updates (written
   only by `android/tools/publish_release.ps1` from the built APK; the APK itself is a GitHub Release asset of this
   repository, tag `android-vX.Y`, file `meddeb_vX.Y.apk`).
 - `models/` - the phone models re-hosted for the Meddeb apps (parts + manifest; see each folder's README and LICENSE).
-- `LICENSE.md` - the licences of this repository; `THIRD_PARTY_NOTICES.md` and `licenses/` - the third-party notices and licence texts of the Meddeb apps (copies of the app's files).
+- `LICENSE.md` - the licences of this repository; `THIRD_PARTY_NOTICES.md` and `licenses/` - the third-party notices and licence texts of the Meddeb apps (exported with the web app).
 - Bugs and ideas: [open an issue](https://github.com/Karim-53/Meddeb/issues/new/choose).
 
 ## Screenshots
