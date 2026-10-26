@@ -8,7 +8,8 @@ in force for it; nothing in the Meddeb licence limits the rights that those lice
 licence texts are in the folder licenses/ next to this file; each entry names its file.
 
 Checked on 2026-10-01 for the Android app 0.5, the PC app and the web repository; section 1 and the build
-and test tools updated on 2026-10-17 (0.12) for the website's screenshots.
+and test tools updated on 2026-10-17 (0.12) for the website's screenshots; py-fsrs (section 6) added on
+2026-10-25 (0.16) for the Review page.
 
 Where a component ships:
 
@@ -435,6 +436,17 @@ Copyright 2016-2021 JetBrains s.r.o and respective authors and developers
 - Ships in: Android app (bootstrap.imy)
 - Licence text: licenses/chaquopy_bootstrap_packages.txt; licenses/apache_2_0.txt (importlib_resources)
 
+### py-fsrs (the FSRS-6 scheduler of the Review page)
+
+- Version: py-fsrs v6.3.2 (fsrs/scheduler.py): its formulas and its 21 default parameters (FSRS-6),
+  rewritten in Meddeb's recite/fsrs.py (no py-fsrs code or package is shipped or installed)
+- SPDX: MIT
+- Copyright: Copyright (c) 2022 Open Spaced Repetition
+- Source: https://github.com/open-spaced-repetition/py-fsrs (tag v6.3.2)
+- Ships in: Android app (recite/fsrs.py, the Review page, issue #39, 0.16); PC app (the same file); web app (the same
+  file in the engine, the Review page not shown there yet)
+- Licence text: licenses/mit_py_fsrs.txt
+
 
 ## 7. Web app: Python, NumPy and the speech model's runtime in the browser
 
@@ -630,6 +642,7 @@ notices, and the obligations of the LGPL libraries below, must ship with it.
 - licenses/emscripten_runtime.txt: the Emscripten runtime and musl libc (MIT / NCSA), web app
 - licenses/mit_stacktracejs.txt: error-stack-parser and stackframe bundled in Pyodide (MIT), web app
 - licenses/chaquopy_bootstrap_packages.txt: setuptools, pyelftools and their vendored packages
+- licenses/mit_py_fsrs.txt: py-fsrs (MIT), the FSRS-6 formulas and parameters of recite/fsrs.py
 - licenses/mpl_2_0.txt: Mozilla Public License 2.0 (Mozilla CA certificates, cacert.pem; Pyodide)
 - licenses/ofl_amiri_quran.txt: Amiri Quran font (SIL OFL 1.1)
 - licenses/ofl_noto_naskh_arabic.txt: Noto Naskh Arabic font (SIL OFL 1.1)

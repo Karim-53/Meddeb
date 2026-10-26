@@ -9,7 +9,8 @@
    browser (U1.5), the bug report (U1.16); and of 2026-10-11 (v0.9): the model download on a fresh phone with its small
    progress bar (D2, B3.13), the toasts that hide by themselves, the bug report's toast (D3); and of 2026-10-17 (v0.12):
    the mark drawn before the engine answers (historyAfterMark, issue #23), the double tap and its undo (wordTapStep,
-   doubleTapPlan, issue #24). No DOM here. */
+   doubleTapPlan, issue #24); and of 2026-10-25 (v0.16): the cue of the first voice «next» with its starter hint
+   (cueStarterHint, #36), the Review page (reviewCounters ... reviewResultView, #39). No DOM here. */
 (function (root) {
   'use strict';
   const MISTAKE = new Set(['wrong', 'missing', 'hinted']);
@@ -166,7 +167,8 @@
    *  of ?surah=&ayah=), hasSession}. The page's first ayah of the chosen surah (else the page's first ayah); the URL's
    *  ayah before any session (never before the page); the found place when it is on the page shown and of the chosen
    *  surah. A Progress ayah link is no start any more (v0.11-0.14: the window began at it, and the link kept that
-   *  start after the page was turned), nor anything without `search`. */
+   *  start after the page was turned), nor anything without `search`. #39 (v0.16): a review card's start ({surah,
+   *  ayah: the run-up's first ayah, page, review}) is kept the same way. */
   function startAyah(o) {
     o = o || {};
     const ayahs = o.ayahs || [];
@@ -175,7 +177,7 @@
     const u = o.url;
     if (u && +u.ayah > 0 && +u.surah === +o.surah && !o.hasSession) from = Math.max(+u.ayah, from);
     const s = o.startAt;
-    if (s && s.search && +s.surah === +o.surah && +s.page === +o.page) from = +s.ayah;
+    if (s && (s.search || s.review) && +s.surah === +o.surah && +s.page === +o.page) from = +s.ayah;
     return from;
   }
 
@@ -203,6 +205,15 @@
    *  without a session); Hidden's grey blocks and Shown are hints already. o = {mode, visibleOnPage}. */
   function starterHintAvailable(o) {
     return !!o && o.mode === 'blind' && !(+o.visibleOnPage > 0);
+  }
+
+  /** #36 (v0.16): the starter hint shown with a voice cue (the first «next», or a replay, before the first word,
+   *  X2.15): where the sheet is offered (starterHintAvailable) and the session starts at the page's first word
+   *  (sessionFirst = session.first, pageFirst = the session index of the page's first word, null outside the session):
+   *  a session that starts further on the page would get the end of the page before, the wrong place. o = {mode,
+   *  visibleOnPage, sessionFirst, pageFirst}. */
+  function cueStarterHint(o) {
+    return starterHintAvailable(o) && o.sessionFirst != null && o.pageFirst != null && +o.sessionFirst === +o.pageFirst;
   }
 
   /** #40 (user: "the minimum lines + a random 0 to 2 extra lines"): the previous page's line numbers the sheet shows,
@@ -272,6 +283,21 @@
       const above = i > 0 && rows[i - 1] && Array.isArray(rows[i - 1].surahs) ? rows[i - 1].surahs : [];
       return {text: ids.length === 1 && above.includes(ids[0]) ? '' : title, title};
     });
+  }
+
+  /** #42 (user, 2026-10-25: "replace the date by the nb of days ago it was recited from: today, 1, 2, ... 99, +99 …
+   *  no row is gonna consume two lines for no needed reason"): the Progress table's Days ago cell, from a page's
+   *  last_revised 'yyyy-mm-dd' and today's date on the device's clock (same form; a time after it is ignored): 'today',
+   *  '1' … '99', '+99'; a date after today (a clock set back) reads 'today'. words (the Manzil check line): 'today',
+   *  '1 day ago', '12 days ago', '+99 days ago'. Calendar days (UTC arithmetic: no DST shift); '' when either date is
+   *  unreadable. */
+  function daysAgoText(iso, today, words) {
+    const day = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
+    const n = Math.round((day(today) - day(iso)) / 86400000);
+    if (!Number.isFinite(n)) return '';
+    if (n <= 0) return 'today';
+    const t = n > 99 ? '+99' : String(n);
+    return words ? `${t} day${n === 1 ? '' : 's'} ago` : t;
   }
 
   // ---------------------------------------------------------------- X2.12 (a) the manual mistake label (user, 2026-10-01)
@@ -610,12 +636,13 @@
    *  paused, ■ not pressed) and threshold (D2: during it a mistake on a word not said yet is a bar, not the word; a
    *  provisional verdict on a word not said yet is not the word either (review 2026-10-11, #2: a word heard only as
    *  nonsense, D6, or wrong under the threshold, was drawn, joined `shown` and stayed the word once it turned "being
-   *  confirmed"): it shows once said, final, revealed or after ■)}.
-   *  Independent of the text mode on purpose: the page adds every visible word to `shown`. */
+   *  confirmed"): it shows once said, final, revealed or after ■); #39 (v0.16): inCue (a word of a review card's cue,
+   *  drawn greyed before the run-up: never a word of the session, never a hint)}.
+   *  Independent of the text mode on purpose: the page adds every visible word to `shown` (the cue's words excepted). */
   function wordVisible(st, o) {
     o = o || {};
     const first = o.first || 0;
-    if (o.inRevealed) return true;
+    if (o.inRevealed || o.inCue) return true;
     // #33 review: a restart further on (first grew) puts the words before it back to not recited: shown before, they
     // are no longer (X2.1c), unless hinted or marked by the user
     if (o.inShown && o.gi != null && o.gi < first && !(st && (st.hinted || st.user))) return false;
@@ -738,14 +765,94 @@
   /** U1.11 revised: the Progress page's three checks, each done today or not. Manzil: while its date is green (orange
    *  or red, and nothing recited yet: to do). Weakest page: unless its count is red (no weak page = no mistake: done).
    *  Next to learn: when it moved forward by at least one ayah today (progress.next_advanced_today = its mushaf
-   *  position now minus at midnight; every ayah recited: done). */
-  function progressChecks(p) {
-    if (!p || typeof p !== 'object') return {manzil: false, weak: false, next: false};
-    return {
+   *  position now minus at midnight; every ayah recited: done). #39 (v0.16): with the Review page's queue q
+   *  (review_queue, its own call when Progress opens), a 4th check: review, done once no card is due today (no q:
+   *  no such key, the line is not shown). */
+  function progressChecks(p, q) {
+    const out = !p || typeof p !== 'object' ? {manzil: false, weak: false, next: false} : {
       manzil: !!(p.manzil && p.manzil.revised_level === 'ok'),
       weak: !p.weak || p.weak.err_level !== 'bad',
       next: !p.next_to_learn || (+p.next_advanced_today || 0) >= 1,
     };
+    if (q !== undefined) out.review = reviewCounters(q).due === 0;
+    return out;
+  }
+
+  // ---------------------------------------------------------------- #39 the Review page (v0.16; U1.10, U1.20)
+  // user, 2026-10-25: "Build something, let's see; only the Android app, not the web for now."
+  /** The engine offers the review calls (engine.features.review: Android and the PC; the web's engine: none). */
+  function reviewOn(features) { return !!features && features.review === true; }
+
+  /** review_queue's counters, cleaned (whole numbers >= 0): {red (today's errors, due again today), green (read right
+   *  once before today, due today), due (counters.total_due), suspended}. */
+  function reviewCounters(q) {
+    const c = (q && q.counters) || {};
+    const n = (v) => Math.max(0, Math.round(+v) || 0);
+    return {red: n(c.red), green: n(c.green), due: n(c.total_due), suspended: n(c.suspended)};
+  }
+
+  const REVIEW_TAGS = {new: 'new', red: 'to fix', green: 'to confirm', stubborn: 'stubborn'};
+  /** A row of the Review list (a review_queue card, names = {surah id: English name}): {title (the surah · the page),
+   *  detail (its mistakes in the last 5 readings · the engine's why), tag (the card's state), tagText}. Never the
+   *  target's ayat: the card test is hidden (user, #39: the user starts e.g. at ayah 8 for an error at 10). */
+  function reviewCardView(card, names) {
+    const c = card || {};
+    const name = (names && names[c.surah]) || `Surah ${c.surah}`;
+    const n = Math.max(0, Math.round(+c.errors) || 0);
+    const tag = REVIEW_TAGS[c.state] ? c.state : 'new';
+    return {title: c.page ? `${name} · page ${c.page}` : name,
+      detail: [`${n} mistake${n === 1 ? '' : 's'}`, c.why ? String(c.why) : ''].filter(Boolean).join(' · '),
+      tag, tagText: REVIEW_TAGS[tag]};
+  }
+
+  /** The cue drawn in place on the run-up's page (review_card's cue.lines, line numbers of `page`): the keys of the
+   *  words on those lines that come before the run-up's first ayah `from` ({surah, ayah}); its first words, on the
+   *  same line, are the user's to recite. */
+  function reviewCueKeys(page, lines, from) {
+    const ws = page && Array.isArray(page.words) ? page.words : [];
+    const want = new Set((lines || []).map(Number)), f = from || {};
+    const before = (w) => +w.surah < +f.surah || (+w.surah === +f.surah && +w.ayah < +f.ayah);
+    const out = [];
+    for (const ln of (page && page.lines) || []) {
+      if (!want.has(+ln.n)) continue;
+      for (const [start, n] of ln.runs || []) {
+        for (let k = +start; k < +start + +n; k++) { const w = ws[k]; if (w && before(w)) out.push(`${w.surah}:${w.ayah}:${w.idx}`); }
+      }
+    }
+    return out;
+  }
+
+  /** The session index of the last word of ayah surah:ayah from the session's index map ({"s:a": start}): the next
+   *  ayah's start minus 1 (the next surah's once the session followed it, X2.1d), else the session's last word
+   *  (nWords - 1); null when the ayah is not in the session. */
+  function reviewTargetLast(indexMap, surah, ayah, nWords) {
+    const m = indexMap || {}, s = m[`${surah}:${ayah}`];
+    if (s == null) return null;
+    let next = null;
+    for (const v of Object.values(m)) if (+v > +s && (next == null || +v < next)) next = +v;
+    if (next != null) return next - 1;
+    return +nWords > +s ? +nWords - 1 : null;
+  }
+
+  /** The card strip's Next (user, #39: "a Next button green-outlined ("skip for now") becomes filled Next once the task
+   *  is done"): filled once the target's last word (lastGi) has a final verdict (or the user's) or the cursor passed
+   *  it; o = {lastGi, st (its state), cursor} -> {filled, action ('skip' | 'done': ■ and the result), label, title}. */
+  function reviewNextState(o) {
+    o = o || {};
+    const st = o.st || {}, gi = o.lastGi;
+    const done = gi != null && (FINAL.has(String(st.status)) || !!st.user || +o.cursor > +gi);
+    return done ? {filled: true, action: 'done', label: 'Next', title: 'The card is done: stop and see the result'}
+      : {filled: false, action: 'skip', label: 'Next', title: "Skip this card for now: it comes back at the end of today's round"};
+  }
+
+  /** review_result r -> what the strip shows: {passed, head, ayat: [{text 's:a', ok, runup}], due ('Next review: today' |
+   *  'Next review: 29 Oct 2026'), why (the engine's sentence), help (offer Help me learn: a fail the engine flags)}. */
+  function reviewResultView(r) {
+    if (!r || typeof r !== 'object') return {passed: false, head: 'No result', ayat: [], due: '', why: '', help: false};
+    const ayat = (Array.isArray(r.ayat) ? r.ayat : []).map(a => ({text: `${a.surah}:${a.ayah}`, ok: !!a.ok, runup: a.role === 'runup'}));
+    const day = r.next_due === 'today' ? 'today' : dayText(r.next_due);
+    return {passed: !!r.passed, head: r.passed ? 'Passed' : 'Not yet', ayat, due: day ? `Next review: ${day}` : '',
+      why: r.why ? String(r.why) : '', help: !r.passed && !!r.help};
   }
 
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
@@ -991,6 +1098,26 @@
    *  page size `min`, within [min, 72]. */
   function defaultOwnSize(min) { return clamp(Math.round(min * 1.5), min, FONT_MAX); }
 
+  const TEXT_SLACK = 0.08;   // #43: the text block may be 8 % wider than its widest line (a little air between words)
+  // #43 review: and at least 24 em wide (the 95th percentile of a page's widest line: 23.5 em), so the block keeps one
+  // width on nearly every page turn instead of following each page's widest line; a wider page widens it
+  const TEXT_STEADY_EM = 24;
+  /** #43 (user, 2026-10-25: "on a large screen like web or tablet, there might be too much space between words so I
+   *  think it makes sense to center the text rather than having too much space"): the width cap of the mushaf's text
+   *  block, which the page centres. o = {fit, maxW (the widest Madani line at `ref` px, the minimal gaps included, as
+   *  for fitFont), ref, font (the size in use), availW (the box)}. Fit page / Fit width: the widest line's natural
+   *  width at that font plus 8 %, when that is narrower than the box; 0 (no cap: the box's width) otherwise: a phone in
+   *  portrait, whose font fills the width with that line, and always in Own size (its words flow and wrap: a justified
+   *  line spreads by less than one word, a narrower block would only shorten its lines) or without a measure. */
+  function textWidthCap(o) {
+    o = o || {};
+    if (normalizeFit(o.fit) === 'free') return 0;
+    const maxW = +o.maxW, ref = +o.ref || 40, font = +o.font, availW = +o.availW;
+    if (!(maxW > 1) || !(font > 0) || !(availW > 0)) return 0;
+    const cap = Math.max(TEXT_STEADY_EM * font, maxW * font / ref) * (1 + TEXT_SLACK);
+    return cap < availW ? cap : 0;
+  }
+
   /** D10 (user, 2026-10-10: "half a gesture = +1, a whole one at most +4"): the whole pixels a two-finger pinch adds,
    *  from the finger distance ratio r = d1 / d0: sign(ln r) * min(4, round(4 * (|ln r| / ln 3)^2.6)); a whole gesture
    *  (3x apart) = 4 px, half of it = 1 px whether half is 1.73x (log scale) or 2x (half the finger travel; review
@@ -1048,14 +1175,19 @@
     const words = v && Array.isArray(v.words) && v.words.length === 2 ? [+v.words[0], +v.words[1]] : null;
     const none = {act: 'none', words: null, toast: VOICE_TOAST[name] || null};
     if (name === 'stop' || name === 'pause') return {act: name, words: null, toast: null};
+    // #36 (v0.16, user 2026-10-25: "since I didn't start yet, it is better to start with a line hint rather than showing
+    // a word and counting it as a mistake … I directly say kalima, you read the hint. Then I say kalima again, you read
+    // and show the next word"): a next or a replay with no words and a cue (B3.8 `before`) is the cue, whatever the
+    // Reciter audio setting; the next's toast says the second one shows the word
+    const b = v && v.before;
+    if ((name === 'replay' || name === 'next') && !words && b && typeof b === 'object' && b.kind) {
+      const toast = b.kind === 'surah' ? `Voice: ${b.name} begins here`
+        : b.kind === 'ayah' ? `Voice: ${b.surah}:${b.ayah}, the ayah before`
+        : name === 'next' ? 'Voice: the words before' : VOICE_TOAST.replay;
+      return {act: 'before', words: null, before: b, toast: name === 'next' ? toast + ' (say it again for the word)' : toast};
+    }
     if (name === 'replay') {
       if (words) return {act: 'play', words, toast: VOICE_TOAST.replay};
-      const b = v.before;
-      if (b && typeof b === 'object' && b.kind) {
-        const toast = b.kind === 'surah' ? `Voice: ${b.name} begins here`
-          : b.kind === 'ayah' ? `Voice: ${b.surah}:${b.ayah}, the ayah before` : VOICE_TOAST.replay;
-        return {act: 'before', words: null, before: b, toast};
-      }
       return {act: 'none', words: null, toast: 'Nothing recited yet to replay.'};
     }
     if ((name === 'next' || name === 'eyah') && words && ctx.revealAudio !== false) return {act: 'play', words, toast: none.toast};
@@ -1452,9 +1584,10 @@
   }
 
   const api = {isMistake, sessionRemoveAction, lastOutcome, removeLabel, stateAfterMark, historyAfterMark, markWhen, swipePage,
-    pullDown, pullUp, starterHintAvailable, starterHintLines,
+    pullDown, pullUp, starterHintAvailable, starterHintLines, cueStarterHint,
+    reviewOn, reviewCounters, reviewCardView, reviewCueKeys, reviewTargetLast, reviewNextState, reviewResultView,
     DOUBLE_TAP_MS, POP_DELAY_MS, wordTapStep, contextMistake, doubleTapPlan, startAyah,
-    DEFAULT_SORT, normalizeSortState, nextSortState, sortProgressRows, progressSurahLabels,
+    DEFAULT_SORT, normalizeSortState, nextSortState, sortProgressRows, progressSurahLabels, daysAgoText,
     statusLabel, summaryVerdict, shownHeard, readingText, shouldFollowCursor, isOutsideTap, mergeIndexMap,
     LISTEN_DEFAULT, clampListenForm, listenParams, playsText, listenFormFromTarget, nowPlayingText, linkLicenceFiles, centreLines,
     listenOptionsOn, listenPlayOptions, mulberry32, passShape, marginSteps, passClips, fadeVolume,
@@ -1463,7 +1596,7 @@
     paceWindowText, paceLines, STATS_LINES, STATS_CHART, statsChartSvg,
     statsPointAt, statsPointText, LISTEN_ON, barMode, modeStopsListen,
     listenBar, listenFollow,
-    versionsText, FITS, FONT_MAX, normalizeFit, nextFit, fitInfo, fitFont, pinchFont, voiceAction, cueSteps,
+    versionsText, FITS, FONT_MAX, normalizeFit, nextFit, fitInfo, fitFont, textWidthCap, pinchFont, voiceAction, cueSteps,
     revealedRange, revealIndices, revealScroll, joinsPrevious, writtenGroups, writtenText, groupView,
     confirming, unsaidMistake, placeholderKind, ayahMarkerShown, sessionOutcome, wordState, sessionRevealMsg, barSignals,
     defaultOwnSize, pinchStep, WHEEL_GAP_MS, wheelStep, wheelPixels, sizeToast, CLICK_PEAK,

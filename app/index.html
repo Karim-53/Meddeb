@@ -29,7 +29,9 @@
   #fitBtn svg { display:block; width:1.35em; height:1.35em; }
   /* ---- mushaf page: exactly the 15 lines of the Madani page, font fitted to the box (U1.1b) */
   #mushaf { flex:1; overflow:hidden; padding:.35rem .8rem; position:relative; }
-  #text { direction:rtl; height:100%; display:flex; flex-direction:column; font-family:"Amiri Quran", "Noto Naskh Arabic", "Traditional Arabic", serif; font-size:24px; line-height:1.6; }
+  #text { direction:rtl; height:100%; display:flex; flex-direction:column; font-family:"Amiri Quran", "Noto Naskh Arabic", "Traditional Arabic", serif; font-size:24px; line-height:1.6; margin:0 auto; }
+  /* #43 (user, 2026-10-25: "center the text rather than having too much space"): on a wide box fitPage caps the block's
+     width at its widest line (+8 %, L.textWidthCap) and it is centred; a phone in portrait keeps the whole width */
   .line { flex:1 1 0; min-height:0; display:flex; align-items:center; direction:rtl; white-space:nowrap; }
   .line.words { justify-content:space-between; }
   .line.words.last { justify-content:center; }
@@ -76,9 +78,11 @@
      as printed, greyed and not tappable (a tap on it puts it away) */
   #starterHint { position:absolute; left:0; right:0; top:0; z-index:6; background:var(--bg); padding:.15rem .8rem .3rem; border-bottom:2px dashed #cfc9b8; box-shadow:0 4px 12px rgba(0,0,0,.08); animation:hintdown .25s ease-out; cursor:pointer; }
   #starterHint .cap { font-size:.72rem; color:var(--muted); text-align:center; }
-  #starterHint .lines { direction:rtl; font-family:"Amiri Quran", "Noto Naskh Arabic", "Traditional Arabic", serif; line-height:1.6; opacity:.5; filter:grayscale(1); pointer-events:none; }
+  #starterHint .lines { direction:rtl; font-family:"Amiri Quran", "Noto Naskh Arabic", "Traditional Arabic", serif; line-height:1.6; opacity:.5; filter:grayscale(1); pointer-events:none; margin:0 auto; min-width:min-content; }   /* #43: the page's width cap; review: never narrower than its own widest line (the previous page's) */
   #starterHint .line { flex:none; height:1.95em; }
   @keyframes hintdown { from { transform:translateY(-100%); } to { transform:none; } }
+  /* #39 (user, 2026-10-25): a review card's cue on the run-up's page, greyed like the starter hint (U1.10, U1.20) */
+  .w.cue { opacity:.5; filter:grayscale(1); }
   /* ---- bottom bar: one row of icons (U1.1 v4) */
   #bottom { background:var(--bar); border-top:1px solid var(--line); padding:.3rem .5rem; display:flex; flex-wrap:nowrap; gap:.4rem; align-items:center; position:relative; }
   /* D2 (v0.9, user 2026-10-11): the speech model's download (Kotlin's own, D1): a thin bar along the bar's top edge */
@@ -156,6 +160,10 @@
      Coran"): plain like the other lines, no dot on ☰; red only when the installed version is no longer supported */
   #menu #menuUpdate { border-top:1px solid var(--line); border-radius:0 0 6px 6px; margin-top:.2rem; }
   #menu #menuUpdate.required { color:var(--wrong); }
+  /* #44 (user, 2026-10-25): the web's last line, a link to the website's download page (a new tab), no view */
+  #menu a { display:block; padding:.45rem .7rem; font-size:.9rem; border-radius:6px; color:inherit; text-decoration:none; }
+  #menu a:hover { background:#f3efe2; }
+  #menu #menuAndroid { border-top:1px solid var(--line); border-radius:0 0 6px 6px; margin-top:.2rem; }
   #aboutUpdate { max-width:40rem; margin:.2rem 0 .8rem; padding:.5rem .7rem; border:1px solid var(--line); border-radius:8px; background:#fff; }
   /* issue #25: the release notes under the buttons, in a box 5 lines high (5 x 1.3em, plus its padding and separator:
      border-box) that scrolls by itself */
@@ -185,7 +193,7 @@
   #sayTable td { padding:.3rem .5rem; border-bottom:1px solid var(--line); vertical-align:middle; }
   #sayTable td.say { text-align:right; font-family:"Noto Naskh Arabic", serif; font-size:1.2rem; line-height:1.6; white-space:nowrap; }
   #sayTable td.say .or { font-family:Inter, "Segoe UI", sans-serif; font-size:.78rem; color:var(--muted); }
-  #progHead { list-style:none; padding:0; margin:0 0 1rem; line-height:1.9; }
+  #progHead { list-style:none; padding:0; margin:0 0 .8rem; line-height:1.6; }   /* #42: compact (was 1.9) */
   #progHead a, #progTable a { color:#1565c0; font-weight:600; text-decoration:none; }
   /* issue #13 (D6, v0.12): Progress = three check lines (done today: a green box with a white tick; to do: empty) */
   #progHead li.chk { display:flex; align-items:baseline; gap:.5rem; }
@@ -219,15 +227,40 @@
   /* issue #30: "Pace over" (the pace and finish date's days), a 40 px touch target */
   #statsPaceLbl { display:inline-flex; align-items:center; gap:.4rem; margin:.35rem 0 .1rem; color:var(--muted); font-size:.82rem; }
   #statsPaceLbl select { min-height:40px; color:var(--ink); font-size:.9rem; }
-  #progTable { border-collapse:collapse; font-variant-numeric:tabular-nums; }
-  #progTable th, #progTable td { padding:.25rem .9rem; text-align:right; border-bottom:1px solid var(--line); }
+  /* ---- #39 (v0.16) the Review page, and the card strip above the mushaf while a card is on (U1.10, U1.20) */
+  #reviewView { flex:1; overflow:auto; padding:.8rem 1rem 1.5rem; font-size:.88rem; -webkit-user-select:text; user-select:text; }
+  #reviewView h2 { margin:.2rem 0 .6rem; font-size:1.1rem; }
+  #reviewView h3 { margin:1.1rem 0 .3rem; font-size:.95rem; border-bottom:1px solid var(--line); max-width:40rem; padding-bottom:.15rem; }
+  #revCounts { display:flex; flex-wrap:wrap; gap:.4rem; align-items:center; margin-bottom:.7rem; }
+  #revList, #revSus { list-style:none; padding:0; margin:0; max-width:40rem; }
+  #revList li, #revSus li { display:flex; align-items:center; gap:.6rem; padding:.45rem 0; border-bottom:1px solid var(--line); }
+  #revList .txt, #revSus .txt { flex:1 1 auto; min-width:0; }
+  #revList .det, #revSus .det { color:var(--muted); font-size:.8rem; }
+  #reviewView li button { min-height:40px; min-width:4.6rem; }
+  .tag { display:inline-block; margin-left:.35rem; padding:.02rem .4rem; border-radius:999px; font-size:.7rem; font-weight:600; background:#eee; color:#555; }
+  .tag-red { background:#f8d7da; color:#b71c1c; } .tag-green { background:#d4edda; color:#1b5e20; } .tag-stubborn { background:#f1e3d0; color:#6b4413; }
+  #revStrip { display:flex; flex-wrap:wrap; gap:.3rem .45rem; align-items:center; padding:.3rem .5rem; background:#f3efe2; border-bottom:1px solid var(--line); font-size:.82rem; }
+  body:not([data-view=recite]) #revStrip { display:none !important; }   /* the card's strip belongs to Recite */
+  #revStrip .what { flex:1 1 9rem; min-width:0; }
+  #revStrip .ayat > span { margin-right:.45rem; white-space:nowrap; }
+  #revStrip .ok { color:var(--ok); font-weight:600; } #revStrip .bad { color:var(--wrong); font-weight:600; }
+  #revStrip button { min-height:38px; font-size:.82rem; }
+  /* user, #39: "a Next button green-outlined ("skip for now") becomes filled Next once the task is done" */
+  button.revNext { border:2px solid var(--ok); color:var(--ok); background:#fff; font-weight:600; min-width:4.6rem; }
+  button.revNext.filled { background:var(--ok); color:#fff; }
+  /* #42 (user, 2026-10-25: "make sure the table becomes dense again because no row is gonna consume two lines for no
+     needed reason"): no cell wraps; the table takes the view's width (at most 32rem) and the Surah column what the
+     other columns leave, its name cut with an ellipsis (the full name is its tooltip) */
+  #progTable { border-collapse:collapse; font-variant-numeric:tabular-nums; width:100%; max-width:32rem; }
+  #progTable th, #progTable td { padding:.25rem .6rem; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+  #progTable td[colspan] { white-space:normal; }   /* "Nothing recited yet: …" may wrap */
   #progTable th { color:var(--ink); font-size:.82rem; padding:.15rem .5rem; }
   #progTable th button { border:none; background:none; padding:.2rem .3rem; font-weight:700; color:inherit; display:inline-flex; align-items:center; gap:.2rem; }   /* U1.11 sorting */
   #progTable th .arrow { display:inline-flex; width:.85em; height:.85em; }
   #progTable th .arrow svg { width:100%; height:100%; }
   /* #38 (user, 2026-10-23): the surah of each page, named only where it changes (L.progressSurahLabels) */
   #progTable th.sur { text-align:left; }
-  #progTable td.sur { text-align:left; font-size:.82rem; white-space:normal; max-width:12rem; padding:.25rem .5rem; }
+  #progTable td.sur { text-align:left; font-size:.82rem; white-space:nowrap; max-width:0; width:100%; overflow:hidden; text-overflow:ellipsis; padding:.25rem .5rem; }
   /* ---- Listen (U1.13) */
   #listenView { font-size:.9rem; }
   #lQuick { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.4rem; margin-bottom:.9rem; max-width:36rem; }
@@ -295,7 +328,7 @@
 </head>
 <body data-view="recite">
 <header id="top">
-  <button class="iconbtn" id="menuBtn" title="Menu: Recite / Listen / Progress / Stats / Settings / Help &amp; tips / About / Send feedback">☰</button>
+  <button class="iconbtn" id="menuBtn" title="Menu: Recite / Listen / Progress / Review / Stats / Settings / Help &amp; tips / About / Send feedback">☰</button>
   <select id="surah" title="Surah"></select>
   <div id="pagenav">
     <input id="page" type="number" min="1" max="604" value="1" title="Mushaf page (Madani, 604 pages). Turn the page with a swipe (to the right = next page) or ← next / → previous">
@@ -304,7 +337,8 @@
   </div>
   <select id="mode" title="Text mode (H): shown / hidden (grey blocks) / blind (nothing at all until a word is recited or revealed; an ayah's number appears with the next ayah's first word; on an empty page, pull down (↓) for the end of the page before)"><option value="show">Shown</option><option value="hide">Hidden</option><option value="blind">Blind</option></select>
 </header>
-<nav id="menu"><button data-view="recite" class="current">Recite</button><button data-view="listen">Listen</button><button data-view="progress">Progress</button><button data-view="stats">Stats</button><button data-view="settings">Settings</button><button data-view="help">Help &amp; tips</button><button data-view="about">About</button><button id="menuReport" hidden title="A new GitHub issue that names the app version, the session and, on Android, the screenshot of this page it takes (in Download/Meddeb); nothing is attached or uploaded">Send feedback</button><button id="menuUpdate" hidden></button></nav>
+<nav id="menu"><button data-view="recite" class="current">Recite</button><button data-view="listen">Listen</button><button data-view="progress">Progress</button><button data-view="review" hidden>Review</button><button data-view="stats">Stats</button><button data-view="settings">Settings</button><button data-view="help">Help &amp; tips</button><button data-view="about">About</button><button id="menuReport" hidden title="A new GitHub issue that names the app version, the session and, on Android, the screenshot of this page it takes (in Download/Meddeb); nothing is attached or uploaded">Send feedback</button><a id="menuAndroid" href="https://karim-53.github.io/Meddeb/download.html" target="_blank" rel="noopener" hidden title="Meddeb's website: the download page of the Android app (a new tab)">Download Android app</a><button id="menuUpdate" hidden></button></nav>
+<div id="revStrip" hidden></div><!-- #39: the review card on (U1.10): Suspend, Bury, Next; then its result -->
 <main id="mushaf"><div id="text"><div id="startup"><p>أَعُوذُ بِاللَّهِ مِنَ الشَّيْطَانِ الرَّجِيمِ</p><p>بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p></div></div><div id="starterHint" hidden></div></main>
 <section id="listenView" hidden>
   <div id="lQuick">
@@ -335,7 +369,16 @@
 <section id="progressView" hidden>
   <h2>Progress</h2>
   <ul id="progHead"></ul>
-  <table id="progTable"><thead><tr><th><button data-col="page" title="Sort by page (click again: reverse)">Page<span class="arrow"></span></button></th><th class="sur" title="The surah of the page, named where it changes from the row above">Surah</th><th><button data-col="err" title="Words of this page whose latest reading is a mistake (sort: most first; click again: reverse)">Err<span class="arrow"></span></button></th><th><button data-col="last" title="When the recited part of the page was last recited in full (sort: oldest first; click again: reverse)">Last revised<span class="arrow"></span></button></th></tr></thead><tbody></tbody></table>
+  <table id="progTable"><thead><tr><th><button data-col="page" title="Sort by page (click again: reverse)">Page<span class="arrow"></span></button></th><th class="sur" title="The surah of the page, named where it changes from the row above">Surah</th><th><button data-col="err" title="Words of this page whose latest reading is a mistake (sort: most first; click again: reverse)">Err<span class="arrow"></span></button></th><th><button data-col="last" title="Days since the recited part of the page was last recited in full: today, 1 … 99, +99 (sort: oldest first; click again: reverse)">Days ago<span class="arrow"></span></button></th></tr></thead><tbody></tbody></table>
+</section>
+<!-- #39 (user, 2026-10-25: "Build something, let's see; only the Android app, not the web for now."): today's review
+     cards (U1.10, U1.20); its menu line shows only where engine.features.review says so (Android, the PC) -->
+<section id="reviewView" hidden>
+  <h2>Review</h2>
+  <div id="revCounts"><span class="pill bad" id="revRed" title="Today's errors, due again today">0 to fix</span><span class="pill good" id="revGreen" title="Errors you read right once before today, due today by the schedule">0 to confirm</span><span id="revDue" class="lbl"></span></div>
+  <ol id="revList"></ol>
+  <h3 id="revSusHead" hidden>Suspended</h3>
+  <ul id="revSus"></ul>
 </section>
 <section id="statsView" hidden>
   <h2>Stats</h2>
@@ -376,17 +419,18 @@
     <!-- the Arabic words are isolated (bdi) and kept on one line: in this left-to-right text they would wrap and swap -->
     <div class="help">During a session, after a pause of about 1 s, say:
       «<bdi class="nowrap">الكلمة التالية</bdi>», «<bdi class="nowrap">كلمة تالية</bdi>» or
-      «<bdi class="nowrap">الكلمة الموالية</bdi>» (the next word, or the lost word Meddeb waits on; «<bdi class="nowrap">كلمة</bdi>» alone works too, with about 1 s of silence before and
+      «<bdi class="nowrap">الكلمة الموالية</bdi>» (the next word, or the lost word Meddeb waits on; before your first word, the first one only plays the ayah before, and in Blind shows the end of the page before: say it again for the word; «<bdi class="nowrap">كلمة</bdi>» alone works too, with about 1 s of silence before and
       after it),
       «<bdi class="nowrap">باقي الآية</bdi>» or «<bdi class="nowrap">كمّل الآية</bdi>» (as ⏮, the rest of the ayah),
-      «<bdi class="nowrap">عاودها مرّة</bdi>» or «<bdi class="nowrap">عاود مرّة</bdi>» (Yasser Al-Dossary plays the ayah up to where you are; before your first word, the ayah before or the surah's name),
+      «<bdi class="nowrap">عاودها مرّة</bdi>», «<bdi class="nowrap">عاودها</bdi>» (no silence needed) or «<bdi class="nowrap">عاود مرّة</bdi>» (Yasser Al-Dossary plays the ayah up to where you are; before your first word, the ayah before or the surah's name),
       «<bdi class="nowrap">صدق الله العظيم</bdi>» (as ■, stop and save), «<bdi class="nowrap">استراحة قصيرة</bdi>» or
       «<bdi class="nowrap">استراحة</bdi>» (as ❚❚). Some other forms of these phrases work too.
       A command is never a mistake. Off: nothing fires (the phrases are still never mistakes). Applies from the next
       start.</div>
     <label>Reciter audio on a voice reveal <input id="revealAudio" type="checkbox" checked></label>
     <div class="help">Yasser Al-Dossary plays the word revealed by «<bdi class="nowrap">الكلمة التالية</bdi>» and the words
-      revealed by «<bdi class="nowrap">باقي الآية</bdi>» (the microphone pauses meanwhile). The replay always plays; the
+      revealed by «<bdi class="nowrap">باقي الآية</bdi>» (the microphone pauses meanwhile). The replay always plays, and
+      so does the ayah before that the first «<bdi class="nowrap">الكلمة التالية</bdi>» plays before your first word; the
       ◂ / ⏮ buttons stay silent.</div>
   </div>
   <div class="setGroup">
@@ -506,10 +550,14 @@
   <h4>Voice commands: what to say</h4>
   <p>During a session, while the microphone listens, say:</p>
   <table id="sayTable">
-    <tr><td class="say">«<bdi class="nowrap">الكلمة التالية</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">كلمة تالية</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">الكلمة الموالية</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">كلمة</bdi>» alone</td><td><b>Next word</b>: the next word appears, or the lost word Meddeb waits on, and Yasser Al-Dossary recites it (◂ first reveals the page's short red or taupe line). Say «<bdi class="nowrap">كلمة</bdi>» alone with about 1 second of silence before and after it; next to a word of the passage that sounds like it, only the full phrase works.</td></tr>
+    <tr><td class="say">«<bdi class="nowrap">الكلمة التالية</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">كلمة تالية</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">الكلمة الموالية</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">كلمة</bdi>» alone</td><td><b>Next word</b>: the next word appears, or the lost word Meddeb waits on, and Yasser Al-Dossary recites it (◂ first reveals the page's short red or taupe line). Say «<bdi class="nowrap">كلمة</bdi>» alone with about 1 second of silence before and after it; next to a word of the passage that sounds like it, only the full phrase works.
+      Before your first word (not after Find where I am), the first one reveals and counts nothing: Yasser recites the ayah before (or the surah's
+      name is said) and, in Blind on an empty page, the end of the page before shows; say it again for the first word
+      (it then counts as a hint).</td></tr>
     <tr><td class="say">«<bdi class="nowrap">باقي الآية</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">باقي آية</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">بقية الآية</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">كمّل الآية</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">أعطيني باقي الآية</bdi>»</td><td><b>Rest of the ayah</b>: the rest of the ayah appears (as ⏮) and Yasser recites it.</td></tr>
-    <tr><td class="say">«<bdi class="nowrap">عاودها مرّة</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">عاودها</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">عاود مرّة</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">عاودها مرّة أخرى</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">عاود</bdi>» or «<bdi class="nowrap">أعدها</bdi>» alone</td><td><b>Replay</b>: Yasser recites the ayah from its start up to where you are; before your first word, the ayah
-      before it (or, when the session starts a surah, its name said by the device's Arabic voice, else the basmala). Say «<bdi class="nowrap">عاود</bdi>» or «<bdi class="nowrap">أعدها</bdi>» alone with about 1 second of silence before and after it; next to a word of the passage that sounds like it, only a longer phrase works.</td></tr>
+    <tr><td class="say">«<bdi class="nowrap">عاودها مرّة</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">عاودها</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">عاود مرّة</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">عاودها مرّة أخرى</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">عاودلي</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">أعدها مرّة</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">عاود</bdi>», «<bdi class="nowrap">أعدها</bdi>» or «<bdi class="nowrap">عيدها</bdi>» alone</td><td><b>Replay</b>: Yasser recites the ayah from its start up to where you are; before your first word, the ayah
+      before it (or, when the session starts a surah, its name said by the device's Arabic voice, else the basmala).
+      «<bdi class="nowrap">عاودها</bdi>» and the longer phrases work with no silence around them: the surest choice. Say «<bdi class="nowrap">عاود</bdi>», «<bdi class="nowrap">أعدها</bdi>» or «<bdi class="nowrap">عيدها</bdi>» alone with about 1 second of silence before and after it; next to a word of the passage that sounds like it, only a longer phrase works.</td></tr>
     <tr><td class="say">«<bdi class="nowrap">صدق الله العظيم</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">صدق الله مولانا العظيم</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">صدق الله العلي العظيم</bdi>»</td><td><b>Stop</b>: the session ends and is saved (as <span class="ic" data-icon="stop"></span>).</td></tr>
     <tr><td class="say">«<bdi class="nowrap">استراحة قصيرة</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">استراحة</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">راحة قصيرة</bdi>»<br><span class="or">or</span> «<bdi class="nowrap">استراحة صغيرة</bdi>»</td><td><b>Pause</b>: the microphone pauses (as <span class="ic" data-icon="pause"></span>); press <span class="ic" data-icon="mic"></span> to go on.</td></tr>
   </table>
@@ -663,19 +711,42 @@
     <li>What to do now: three tasks, each with a box. A green box with <span class="ic" data-icon="check"></span> means
       done for today, an empty box means still to do. Built from everything you recited and marked; a word counts as a
       mistake when its latest reading is one.</li>
-    <li><b>Manzil</b>: the page recited longest ago, to revise. Done while its date is green (recited less than 6 days
+    <li><b>Manzil</b>: the page recited longest ago, to revise. Done while its age is green (recited less than 6 days
       ago); to do once it turns orange (6 days) or red (30 days).</li>
     <li><b>Weakest page</b>: the page with the most mistakes. Done unless its count is red (3 mistakes or more).</li>
     <li><b>Next to learn</b>: the first ayah with a word you never recited, moved back over the ayat with mistakes just
       before it. Done once it moved forward by at least one ayah today (since midnight on your device's clock); a new
       mistake can move it back. It stays to do while you never recite the ayah it names.</li>
     <li>The table has one row per page holding an ayah you recited whole (every word read, mistakes or not).
-      <b>Err</b>: its words counted as mistakes (green 0, orange 1-2, red 3+). <b>Last revised</b>: when its recited part
-      was last recited in full (green under 6 days,
-      orange from 6, red from 30).</li>
+      <b>Err</b>: its words counted as mistakes (green 0, orange 1-2, red 3+). <b>Days ago</b>: how long ago its recited
+      part was last recited in full: today, 1 … 99 days, +99 for longer (green under 6 days, orange from 6, red from 30;
+      on a computer, hovering it shows the date).</li>
     <li>Tap a column name to sort (again: reverse). Tap a page or a line to open it; an ayah link shows its ayah (it
       glows a moment), and the microphone follows you from anywhere on that page.</li>
   </ul>
+  <div id="helpReview" hidden>   <!-- #39 (v0.16): Android and the PC only (engine.features.review), with the menu line -->
+  <h3>Review</h3>
+  <ul>
+    <li>A word becomes a <b>card</b> when 2 of its last 5 readings were mistakes (a hint and + Mistake count too),
+      counting only the readings after its ayah was learned; nearby words make one card. Progress has a fourth line,
+      <b>Review: n due</b>, done once no card is due today.</li>
+    <li>Each day the Review page lists up to 10 cards (3 new at most), the cards with the most mistakes first.
+      <b style="color:var(--wrong)">To fix</b>: mistakes made today, due again today; <b style="color:var(--ok)">to
+      confirm</b>: read right once before today, and due today by the schedule.</li>
+    <li><b>Start</b> opens the card's page in Blind with greyed lines before it (on the page, or on top as the end of
+      the page before): recite from where they end, on to the end of the card. The test is hidden: you are not told
+      which ayah it is. No timer.</li>
+    <li><b>Next</b>, outlined green, skips the card for now (it comes back at the end of today's round; skipped twice,
+      it waits until tomorrow). Once the card is done it turns solid green: press it to stop and see the result.</li>
+    <li>The result: ✓ / ✗ for each ayah you recited, and when the card comes back: after a mistake, again today (at
+      most 2 more times), else when the schedule (FSRS) says. A card leaves for good once it passed its last 3 reviews
+      on 3 different days and holds for 2 months; a later mistake brings it back.</li>
+    <li>After a mistake, <b>Help me learn</b> (never forced): <b>Listen</b> (Yasser Al-Dossary recites the ayat of the
+      card) or <b>Recite the join</b> again, as practice.</li>
+    <li><b>Suspend</b> puts a card aside until you unsuspend it (the list at the bottom of the page); <b>Bury</b> waits
+      until tomorrow. Any recitation counts for the cards: reciting their place in Recite reviews them too.</li>
+  </ul>
+  </div>
   <h3>Stats</h3>
   <ul>
     <li>Computed from the same history each time the page opens; nothing new is stored or sent. A day runs from
@@ -893,6 +964,11 @@ function wireChrome() {
   // report runs inside this tap (the PC's window), after the menu closed (out of the screenshot's painted frame)
   $('menuReport').hidden = !engine.reportBug;
   $('menuReport').onclick = (ev) => { ev.stopPropagation(); $('menu').classList.remove('open'); return reportBug(); };
+  // #44 (user, 2026-10-25: "in the menu of meddeb web: there should be a last line "download android app""): the web
+  // app only (hidden on Android and the PC); a link to the website's download page in a new tab, no view: a tap closes
+  // the menu and the browser follows the link
+  $('menuAndroid').hidden = engine.kind !== 'web';
+  $('menuAndroid').onclick = (ev) => { ev.stopPropagation(); $('menu').classList.remove('open'); };
   if (engine.shake) engine.onShake = onShake;   // Android: Kotlin's shake event (Settings > Phone)
   // D2 (v0.9): Kotlin downloads the speech model by itself after the first page (D1): its bar and toasts
   engine.onModelDownload = onModelDownload;
@@ -912,6 +988,10 @@ function wireChrome() {
   }
   $('menuBtn').onclick = (e) => { e.stopPropagation(); $('menu').classList.toggle('open'); };
   $('menu').querySelectorAll('button[data-view]').forEach(b => { b.onclick = (ev) => { ev.stopPropagation(); showView(b.dataset.view); }; });
+  // #39 (user, 2026-10-25: "only the Android app, not the web for now"): Review where the engine has its calls
+  // (engine.features.review: Android and the PC), Help & tips' section with it
+  $('menu').querySelector('button[data-view=review]').hidden = !reviewOn();
+  $('helpReview').hidden = !reviewOn();
   if (engine.update) {   // P5.16 / U1.18 (issue #12): Android only
     engine.onUpdate = onUpdate;
     $('helpUpdate').hidden = false;
@@ -1232,9 +1312,9 @@ async function runImport(fn) {
   catch (e) { setStatus('Import failed: ' + e.message, true); }
 }
 
-// ---------------------------------------------------------------- ☰ menu (U1.10): Recite, Listen, Progress, Stats (U1.19),
-// Settings, Help & tips (U1.15), About
-const VIEWS = ['recite', 'listen', 'progress', 'stats', 'settings', 'help', 'about'];
+// ---------------------------------------------------------------- ☰ menu (U1.10): Recite, Listen, Progress, Review (#39,
+// v0.16: Android and the PC), Stats (U1.19), Settings, Help & tips (U1.15), About
+const VIEWS = ['recite', 'listen', 'progress', 'review', 'stats', 'settings', 'help', 'about'];
 // startAt: {surah, ayah, page, search: true}: the place Find where I am found, where the session that goes on from it
 // starts (#33: a Progress ayah link no longer sets it; another page shown drops it)
 let view = 'recite', startAt = null;
@@ -1242,6 +1322,7 @@ let reciteScroll = 0;                  // U1.1b: the scrolling display modes' po
 function showView(v, opts) {
   $('menu').classList.remove('open');
   if (!VIEWS.includes(v)) v = 'recite';
+  if (v === 'review' && !reviewOn()) v = 'recite';   // #39: an engine without the review calls (the web)
   // issue #19 (D4): going to Recite (☰ > Recite, Back, Esc, a link) while Listen is paused gives the bar to Recite (it
   // stays paused in the notification and in Listen); a Listen that plays keeps its bar, the mushaf following it
   if (v === 'recite' && listenState.status === 'paused') listenSeen = false;
@@ -1256,6 +1337,7 @@ function showView(v, opts) {
   if (!recite) { stopReplay(true); closePop(); $('summary').style.display = 'none'; }   // D13: leaving Recite stops the replay
   if (v !== 'about') closeLicence();
   if (v === 'progress') renderProgress();
+  else if (v === 'review') renderReview();
   else if (v === 'stats') renderStats();
   else if (v === 'listen') openListen();
   else if (v === 'about' || v === 'settings') {
@@ -1393,8 +1475,12 @@ async function refreshVersions() {
   $('profileDir').textContent = t.profile ? 'Profile folder: ' + t.profile : '';
 }
 let progressData = null, progressSort = L.DEFAULT_SORT;
+function todayIso() { return L.markWhen(new Date()).slice(0, 10); }   // #42: today on the device's clock (App.clock's)
 const progLink = (label, page, s, a) => `<a href="#" data-page="${page}"${s ? ` data-surah="${s}" data-ayah="${a}"` : ''}>${label}</a>`;
 async function renderProgress() {
+  // #39 (v0.16): the 4th check line's queue, asked at once and apart from `progress` (which Android runs after every
+  // mark); none on an engine without the review calls (the web), none when it fails (no line then)
+  const rq = reviewOn() ? engine.call('review_queue').catch(() => null) : null;
   let p;
   try { p = await engine.call('progress'); } catch (e) { setStatus('Cannot compute the progress: ' + e.message, true); return; }
   progressData = p;
@@ -1405,19 +1491,29 @@ async function renderProgress() {
   // today, an empty box otherwise), then the table; the learned counts moved to the Stats page (U1.19)
   const done = L.progressChecks(p);
   const box = (ok, rule) => `<span class="box${ok ? ' done' : ''}" role="img" aria-label="${ok ? 'done today' : 'to do'}" title="${rule}">${ok ? ICON.check : ''}</span>`;
-  const adv = +p.next_advanced_today || 0;
+  const adv = +p.next_advanced_today || 0, today = todayIso();
   const head = [
-    // U1.11 (user, 2026-10-04): the Manzil date is coloured like the table's Last revised (green < 6 days ≤ orange < 30 ≤ red)
+    // U1.11 (user, 2026-10-04): the Manzil date is coloured like the table's Last revised (green < 6 days ≤ orange < 30 ≤ red);
+    // #42 (v0.16): its age in the table's days, "recited 12 days ago", the date in its tooltip (one line on a phone)
     [done.manzil, 'Done while the Manzil was recited less than 6 days ago (green); to do once it is orange or red',
-      'Manzil: ' + (p.manzil ? link(`page ${p.manzil.page}`, p.manzil.page) + ` <span class="lbl">(recited longest ago: <span class="nowrap ${L.levelClass(p.manzil.revised_level)}">${p.manzil.last_revised}</span>)</span>` : '—')],
+      'Manzil: ' + (p.manzil ? link(`page ${p.manzil.page}`, p.manzil.page) + ` <span class="lbl">(recited <span class="nowrap ${L.levelClass(p.manzil.revised_level)}" title="Last revised ${p.manzil.last_revised}">${L.daysAgoText(p.manzil.last_revised, today, true) || p.manzil.last_revised}</span>)</span>` : '—')],
     // issue #10 (user, 2026-10-13): the weak page's mistakes are coloured like the table's Err; "in page N" is a link too
     [done.weak, 'Done unless the weakest page has 3 or more mistakes (red)',
       'Weakest page: ' + (p.weak ? link(`page ${p.weak.page}`, p.weak.page) + ` with <span class="${L.levelClass(p.weak.err_level)}">${plural(p.weak.err, 'mistake')}</span>` : 'none')],
     [done.next, 'Done once Next to learn moved forward by at least one ayah today (since midnight)',
       'Next to learn: ' + (p.next_to_learn ? ayahAt(p.next_to_learn) + (adv > 0 ? ` <span class="lbl">(+${adv} today)</span>` : '') : 'every ayah is recited')],
   ];
+  // #39 (U1.10, U1.11): Review: n due, checked at 0; "Review" opens the Review page
+  const q = rq ? await rq : null;
+  if (q) {
+    const c = L.reviewCounters(q);
+    head.push([L.progressChecks(p, q).review, 'Done once no review card is due today',
+      `<a href="#" data-review="1">Review</a>: <b>${c.due}</b> due`
+        + (c.due ? ` <span class="lbl">(${c.red} to fix · ${c.green} to confirm)</span>` : '')]);
+  }
   $('progHead').innerHTML = head.map(([ok, rule, h]) => `<li class="chk">${box(ok, rule)}<span>${h}</span></li>`).join('');
   bindProgressLinks($('progHead'));
+  $('progHead').querySelectorAll('a[data-review]').forEach(a => { a.onclick = (ev) => { ev.preventDefault(); showView('review'); }; });
   renderProgressTable();
 }
 function renderProgressTable() {
@@ -1426,13 +1522,16 @@ function renderProgressTable() {
   const rows = L.sortProgressRows(p.pages, progressSort);
   // #38 (user, 2026-10-23): the Surah column, a name only where it changes from the row above (any sort)
   const sur = L.progressSurahLabels(rows, Object.fromEntries((chapters || []).map(c => [c.id, c.name_simple])));
+  // #42 (user, 2026-10-25: "replace the date by the nb of days ago … today, 1, 2, ... 99, +99"): Days ago, coloured
+  // as before, the date in its tooltip; the column still sorts by the date
+  const today = todayIso();
   $('progTable').tBodies[0].innerHTML = rows.length ? rows.map((r, i) =>
-    `<tr><td>${progLink(r.page, r.page)}</td><td class="sur" title="${escHtml(sur[i].title)}">${escHtml(sur[i].text)}</td><td class="${L.levelClass(r.err_level)}">${r.err}</td><td class="${L.levelClass(r.revised_level)}">${r.last_revised}</td></tr>`).join('')
+    `<tr><td>${progLink(r.page, r.page)}</td><td class="sur" title="${escHtml(sur[i].title)}">${escHtml(sur[i].text)}</td><td class="${L.levelClass(r.err_level)}">${r.err}</td><td class="${L.levelClass(r.revised_level)}" title="Last revised ${r.last_revised}">${L.daysAgoText(r.last_revised, today) || r.last_revised}</td></tr>`).join('')
     : '<tr><td colspan="4" class="lbl">Nothing recited yet: recite a passage or mark words, it will appear here.</td></tr>';
   const active = progressSort[0];
   $('progTable').querySelectorAll('th button[data-col]').forEach(b => {
     const on = active && active.col === b.dataset.col;
-    b.querySelector('.arrow').innerHTML = on ? ICON[active.dir > 0 ? 'up' : 'down'] : '';
+    b.querySelector('.arrow').innerHTML = on ? ICON[(active.col === 'last' ? active.dir < 0 : active.dir > 0) ? 'up' : 'down'] : '';
   });
   bindProgressLinks($('progTable'));
 }
@@ -1504,6 +1603,232 @@ function renderStatsChart() {
   el.onpointermove = at; el.onpointerdown = at;
   el.onpointerleave = (ev) => { if (ev.pointerType === 'mouse') { guide.setAttribute('visibility', 'hidden'); $('statsReadout').textContent = ''; } };
 }
+// ---------------------------------------------------------------- #39 Review (v0.16; U1.10, U1.20, X2.19, B3.16)
+// user, 2026-10-25: "Build something, let's see; only the Android app, not the web for now.": today's cards (Android
+// and the PC: engine.features.review), a card's session in Blind with its greyed cue, the strip (Suspend, Bury, Next),
+// the result and Help me learn. review: null, or the card on screen {card (the queue's), data (review_card's answer),
+// cue (its word keys on the run-up's page, drawn greyed: L.wordVisible's inCue), phase ('starting' | 'running' |
+// 'leaving' (a skip, Suspend or Bury: ■, then the list) | 'result' | 'short' (nothing saved)), practice (Help me
+// learn's Recite the join), result (review_result's answer), help (Help me learn open), why (a failure said)}
+let review = null;
+let reviewOpening = 0;   // #39 review: the latest Start on a card (startReview); an earlier one still opening gives way
+const reviewAsked = new Set();   // the stubborn cards asked "Suspend this card?" (user, #39: asked once)
+function reviewOn() { return L.reviewOn(engine.features); }
+async function renderReview() {
+  let q;
+  try { q = await engine.call('review_queue'); }
+  catch (e) { setStatus("Cannot compute today's review: " + (e && e.message ? e.message : e), true); return; }
+  drawReview(q);
+}
+function drawReview(q) {
+  // the counters (red: today's errors, due again today; green: read right once before today, due today), today's cards
+  // in the round's order with Start, then the suspended ones with Unsuspend (L.reviewCardView: never the target's ayat)
+  const c = L.reviewCounters(q), names = Object.fromEntries((chapters || []).map(x => [x.id, x.name_simple]));
+  $('revRed').textContent = `${c.red} to fix`; $('revGreen').textContent = `${c.green} to confirm`;
+  $('revDue').textContent = `${c.due} due today` + (c.suspended ? ` · ${c.suspended} suspended` : '');
+  const cards = (q && Array.isArray(q.cards)) ? q.cards : [], sus = (q && Array.isArray(q.suspended)) ? q.suspended : [];
+  const row = (card, btn) => {
+    const v = L.reviewCardView(card, names);
+    return `<li><div class="txt"><b>${escHtml(v.title)}</b><span class="tag tag-${v.tag}">${escHtml(v.tagText)}</span>`
+      + `<div class="det">${escHtml(v.detail)}</div></div>${btn}</li>`;
+  };
+  $('revList').innerHTML = cards.length ? cards.map((card, i) => row(card, `<button class="primary" data-start="${i}">Start</button>`)).join('')
+    : '<li class="lbl">Nothing to review today. A word becomes a card when 2 of its last 5 readings were mistakes.</li>';
+  $('revSusHead').hidden = !sus.length;
+  $('revSus').innerHTML = sus.map((card, i) => row(card, `<button data-unsuspend="${i}">Unsuspend</button>`)).join('');
+  $('revList').querySelectorAll('button[data-start]').forEach(b => { b.onclick = () => startReview(cards[+b.dataset.start]); });
+  $('revSus').querySelectorAll('button[data-unsuspend]').forEach(b => {
+    b.onclick = async () => {
+      b.disabled = true;
+      let n;
+      try { n = await engine.call('review_action', {card: sus[+b.dataset.unsuspend].id, action: 'unsuspend'}); }
+      catch (e) { b.disabled = false; setStatus('Cannot unsuspend the card: ' + (e && e.message ? e.message : e), true); return; }
+      setStatus('Card back in the review.');
+      if (view === 'review') { if (n && n.counters) drawReview(n); else renderReview(); }
+    };
+  });
+}
+async function startReview(card, practice) {
+  // Start on a card (practice: Help me learn's Recite the join, level 0, no `shown`): review_card, its run-up's page in
+  // Blind (the test is hidden), the cue greyed (lines on that page in place, lines of the page before in the starter
+  // hint's sheet, a surah's header: a toast), then the session from the run-up's first ayah to the surah's end
+  if (!card) return;
+  if (running || starting || searching || stopping) { setStatus('Stop the recitation first.', true); return; }
+  // #39 review: after each wait, a session begun meanwhile (the microphone pressed while the page loads) or a later
+  // Start (another card, the same one twice) wins: it was taken as the card's ('shown' spent, another session graded)
+  const seq = ++reviewOpening, gone = () => seq !== reviewOpening || running || starting || searching || stopping;
+  let r;
+  try { r = await engine.call('review_card', practice ? {card: card.id, level: 0} : {card: card.id}); }
+  catch (e) { setStatus('Cannot open the card: ' + (e && e.message ? e.message : e), true); return; }
+  if (!r || gone()) return;
+  showView('recite');
+  if (!(await loadPage(r.page)) || gone()) return;
+  // #39 review: the card starts from nothing, as start() does later: the previous session's verdicts, cursor and shown
+  // words (in Blind, Next filled from its states) and the run-up's and target's words revealed with ◂ outside a
+  // session (the hidden test on screen, then sent as revealed: hinted, 'Not yet') would show till then, or for good
+  states = new Map(); cursor = -1; shown.clear(); remask = false; session = null;
+  const tLast = Array.isArray(r.target) && r.target.length ? +r.target[r.target.length - 1] : +r.runup_from;
+  for (const k of [...revealed]) {
+    const [s, a] = k.split(':').map(Number);
+    if (s === +r.surah && a >= +r.runup_from && a <= tLast) revealed.delete(k);
+  }
+  updateCounters();
+  $('surah').value = r.surah;
+  setMode('blind');
+  const cue = r.cue || {};
+  const rv = review = {card, data: r, cue: new Set(L.reviewCueKeys(pageData, cue.lines, {surah: r.surah, ayah: r.runup_from})),
+    phase: 'starting', practice: !!practice, result: null, help: false, why: ''};
+  render(); refreshReviewStrip();
+  const prevLines = Array.isArray(cue.prev_lines) ? cue.prev_lines.map(Number) : [];
+  if (cue.prev_page && prevLines.length) {
+    try {
+      const prev = await engine.call('page', {page: cue.prev_page});
+      if (review === rv && prev) drawStarterHint(prev, prevLines, cue.prev_page, `Cue: end of page ${cue.prev_page}`);
+    } catch (e) { /* the cue's lines on this page, if any, stay */ }
+  } else if (cue.header && !rv.cue.size) {
+    const ch = (chapters || []).find(x => x.id === +r.surah);
+    setStatus(`This card starts ${ch ? ch.name_simple : 'a surah'}: begin with its first ayah`);
+  }
+  if (review !== rv) return;
+  const st = r.start || {surah: r.surah, ayah_from: r.runup_from, review: {card: card.id, target: r.target, level: r.level}};
+  startAt = {surah: +st.surah, ayah: +st.ayah_from, page: pageData.page,
+    review: Object.assign({}, st.review, practice ? {practice: true} : {})};
+  await start();
+}
+function reviewStarted() {
+  // the card's session runs: today's round counts the card as shown (never a practice: the retries are not spent)
+  const rv = review; rv.phase = 'running';
+  if (!rv.practice) engine.call('review_action', {card: rv.card.id, action: 'shown'}).catch(() => { /* the round's count only */ });
+  refreshReviewStrip();
+}
+async function reviewDone(m, byCar) {
+  // the card's session is saved (`done`): its result (review_result, the history now holding it); after a skip,
+  // Suspend or Bury the list; nothing saved: said; the car took over: the review ends
+  const rv = review;
+  if (!rv) return;
+  if (byCar) { endReview(); return; }
+  if (rv.phase === 'leaving') { endReview(); showView('review'); return; }
+  if (rv.phase !== 'running') return;
+  if (!m || !m.folder) { rv.phase = 'short'; refreshReviewStrip(); return; }
+  rv.phase = 'result'; rv.result = null; refreshReviewStrip();
+  let r;
+  try { r = await engine.call('review_result', {card: rv.card.id, folder: m.folder}); }
+  catch (e) {
+    if (review === rv) { rv.phase = 'short'; rv.why = 'No result: ' + (e && e.message ? e.message : e); refreshReviewStrip(); }
+    return;
+  }
+  if (review !== rv) return;
+  rv.result = r || null; refreshReviewStrip();
+}
+function endReview() {
+  // the card is over (the list, another start, ↺, the car): its cue, its sheet and the strip go; #39 review: its start
+  // too (Suspend, Bury or Next during the model wait left it: the next microphone press was a review from the run-up)
+  review = null;
+  if (startAt && startAt.review) startAt = null;
+  hideStarterHint(); refreshReviewStrip(); render();
+}
+async function reviewAct(action) {
+  // the strip's skip (outlined Next), Suspend and Bury: the engine first, then ■ (saved as any recitation, no result)
+  // and the list; with no recitation, the list at once. Never while the session is still starting
+  const rv = review;
+  if (!rv || starting || stopping) return;
+  try { await engine.call('review_action', {card: rv.card.id, action}); }
+  catch (e) { setStatus(`Cannot ${action} the card: ` + (e && e.message ? e.message : e), true); return; }
+  if (review !== rv) return;
+  setStatus({skip: "Card skipped for now: it comes back at the end of today's round.",
+    suspend: 'Card suspended: Review › Suspended brings it back.', bury: 'Card buried until tomorrow.'}[action] || '');
+  if (running && session) { rv.phase = 'leaving'; stop(); return; }
+  endReview(); showView('review');
+}
+function reviewNextNow() {
+  // the strip's Next from the target's last word (L.reviewNextState)
+  const d = review && review.data, t = d && Array.isArray(d.target) ? d.target : [];
+  const last = session && t.length ? L.reviewTargetLast(session.indexMap, d.surah, t[t.length - 1], session.nWords) : null;
+  return L.reviewNextState({lastGi: last, st: last == null ? null : states.get(last), cursor});
+}
+function reviewNext() {
+  // user, #39: Next outlined = skip for now (no review); filled = the card is done: ■, then its result. #39 review:
+  // only while the card's session is live (a second tap once it is saved recorded a skip and lost the result)
+  if (!review || (review.phase !== 'starting' && review.phase !== 'running')) return;
+  if (reviewNextNow().action === 'done' && running && session) { stop(); return; }
+  reviewAct('skip');
+}
+async function reviewNextCard() {
+  // after a result: the first other card of today's round, else the list
+  const cur = review && review.card;
+  let q;
+  try { q = await engine.call('review_queue'); }
+  catch (e) { setStatus("Cannot compute today's review: " + (e && e.message ? e.message : e), true); return; }
+  const next = ((q && q.cards) || []).find(c => !cur || c.id !== cur.id) || null;
+  endReview();
+  if (next) startReview(next);
+  else { showView('review'); setStatus('No other card due today.'); }
+}
+function reviewListen() {
+  // Help me learn › Listen: Yasser recites each ayah of the card's target (the reciter clips of X2.15); again = stop
+  const d = review && review.data; if (!d) return;
+  if (clipOn) { stopClip(true); return; }
+  if (!engine.clipPlayer) { setStatus('This version cannot play the reciter.', true); return; }
+  const t = Array.isArray(d.target) ? d.target : [], steps = [];
+  for (let a = +t[0]; a <= +t[t.length - 1]; a++) steps.push({call: {surah: d.surah, ayah: a}});
+  playCue(steps);
+}
+function refreshReviewStrip() {
+  // the strip above the mushaf while a card is on (Recite only, CSS): during its session Suspend, Bury and Next
+  // (outlined: skip for now; filled once the target is done); after it the result (✓ / ✗ per ayah, the next review and
+  // why), Help me learn on a fail (Listen, Recite the join; no Compare yet), Next card and Review list. Drawn anew only
+  // when what it shows changes (each state refreshes it)
+  const strip = $('revStrip'), rv = review, was = !strip.hidden;
+  strip.hidden = !rv;
+  if (!rv) { strip.replaceChildren(); strip.dataset.sig = ''; }
+  else {
+    const live = rv.phase === 'starting' || rv.phase === 'running', next = live ? reviewNextNow() : null;
+    const sig = [rv.phase, rv.result ? 1 : 0, rv.help ? 1 : 0, next && next.filled ? 1 : 0, rv.why].join('|');
+    if (strip.dataset.sig !== sig) {
+      strip.dataset.sig = sig;
+      const ch = (chapters || []).find(x => x.id === +rv.data.surah), name = ch ? ch.name_simple : `Surah ${rv.data.surah}`;
+      const btn = (k, text, cls, title) => `<button data-rv="${k}"${cls ? ` class="${cls}"` : ''}${title ? ` title="${escHtml(title)}"` : ''}>${text}</button>`;
+      let html;
+      if (live) {
+        const from = +rv.data.runup_from === 1 ? "recite from the surah's first ayah" : 'recite from where the grey lines end';
+        html = `<span class="what"><b>${rv.practice ? 'Practice' : 'Review'}</b> · ${escHtml(name)} <span class="lbl">· ${from}</span></span>`
+          + btn('suspend', 'Suspend', '', 'Put this card aside until you unsuspend it (Review › Suspended)')
+          + btn('bury', 'Bury', '', 'Until tomorrow')
+          + btn('next', next.label, 'revNext' + (next.filled ? ' filled' : ''), next.title);
+      } else if (rv.phase === 'leaving') html = '<span class="what">Saving…</span>';
+      else if (rv.phase === 'short') {
+        html = `<span class="what">${escHtml(rv.why || 'Too short to be saved: nothing was reviewed.')}</span>`
+          + btn('again', 'Try again', 'primary') + btn('list', 'Review list');
+      } else if (!rv.result) html = '<span class="what">Checking the card…</span>';
+      else {
+        const v = L.reviewResultView(rv.result);
+        if (rv.ask === undefined) {   // a stubborn card that failed: "Suspend this card?" once
+          rv.ask = rv.card.state === 'stubborn' && !v.passed && !rv.practice && !reviewAsked.has(rv.card.id);
+          if (rv.ask) reviewAsked.add(rv.card.id);
+        }
+        const ayat = v.ayat.map(a => `<span class="${a.ok ? 'ok' : 'bad'}" title="${a.runup ? 'run-up' : 'the card'}">${a.text} ${a.ok ? '✓' : '✗'}</span>`).join('');
+        html = `<span class="what"><b>${rv.practice ? 'Practice: ' : ''}${escHtml(v.head)}</b> <span class="ayat">${ayat}</span>`
+          + `<br><span class="lbl">${escHtml([v.due, v.why].filter(Boolean).join(' · '))}</span></span>`
+          + (v.help && !rv.help ? btn('help', 'Help me learn', '', 'Optional: listen to the ayat, or recite the join again') : '')
+          + (rv.help ? btn('listen', 'Listen', '', 'Yasser Al-Dossary recites the ayat of the card (again: stop)')
+            + btn('join', 'Recite the join', '', 'The card again, as practice') : '')
+          + (rv.ask ? btn('suspend', 'Suspend this card?', 'danger', 'It keeps failing: put it aside until you unsuspend it') : '')
+          + btn('nextcard', 'Next card', 'primary') + btn('list', 'Review list');
+      }
+      strip.innerHTML = html;
+      const acts = {suspend: () => reviewAct('suspend'), bury: () => reviewAct('bury'), next: reviewNext,
+        help: () => { rv.help = true; refreshReviewStrip(); }, listen: reviewListen,
+        join: () => { const card = rv.card; endReview(); startReview(card, true); },
+        again: () => { const card = rv.card, practice = rv.practice; endReview(); startReview(card, practice); },
+        nextcard: reviewNextCard, list: () => { endReview(); showView('review'); }};
+      strip.querySelectorAll('button[data-rv]').forEach(b => { b.onclick = (ev) => { ev.stopPropagation(); if (review === rv) acts[b.dataset.rv](); }; });
+    } else if (next) {
+      const b = strip.querySelector('button[data-rv=next]');
+      if (b) b.title = next.title;
+    }
+  }
+  if (was !== !strip.hidden) { fitPage(); placeOverlays(); }   // the mushaf's height changed
+}
 async function goTo(page, surah, ayah) {
   // #33 (user, 2026-10-22): an ayah link only opens its page and shows the ayah (it glows a moment); the microphone
   // covers the whole page shown, as for any page (v0.11-0.14: the next session started at that ayah, even after the
@@ -1548,7 +1873,7 @@ function partView(k, showHist) {
   // its bar (D2), its colours (U1.2) and its history glow (U1.2b)
   const w = pageData.words[k], st = stateOf(w), key = wkey(w), gi = gIndex(w);
   const visible = isVisible(w, st, key, gi);
-  if (visible) shown.add(key);                     // U1.2d: per spoken word
+  if (visible && !(review && review.cue.has(key))) shown.add(key);   // U1.2d: per spoken word (#39: a cue's goes with it)
   const bar = L.placeholderKind(st, ctxOf(key, gi));
   const mistake = isMistake(st);
   const h = pageData.history ? pageData.history[k] : null;
@@ -1591,6 +1916,7 @@ function groupSpan(g, cursorKey, showHist) {
     if (v.mistake) { cls += ' mistake'; if (v.missing) cls += ' missing'; if (v.lost) cls += ' lost'; }
     if (v.hinted) cls += ' hinted';
     if (v.keys.includes(cursorKey)) cls += ' cursor';
+    if (review && v.keys.some(k => review.cue.has(k))) cls += ' cue';   // #39: a review card's cue, greyed
   }
   if (sel) cls += ' selected';
   if (playingAyah && w.surah === playingAyah.surah && w.ayah === playingAyah.ayah) cls += ' playing';   // U1.13
@@ -1781,7 +2107,18 @@ function fitPage() {
   fitMin = r.min; shownFont = r.font;
   if (fit === 'free') ownSizeDefault();   // D10: ... and named as the default from then on
   el.style.fontSize = (Number.isInteger(r.font) ? r.font : r.font.toFixed(1)) + 'px';
+  // #43 (user, 2026-10-25: "on a large screen like web or tablet, there might be too much space between words so I think
+  // it makes sense to center the text"): the block is at most its widest line wide at this font (+8 %), centred (CSS)
+  textMeasure = {maxW, ref: REF, availW};
+  el.style.maxWidth = textCapCss(fit, r.font);
   syncStarterHintFont();
+}
+let textMeasure = null;   // #43: fitPage's last measure {maxW (at ref px), ref, availW}: the width caps follow it
+function textCapCss(f, font) {
+  // #43: the CSS max-width of a block of Madani lines at `font` px in display mode f (L.textWidthCap): the widest line's
+  // natural width (+8 %) on a wide box; '' (the box's width) where the width is the limit, in Own size, or unmeasured
+  const m = textMeasure, cap = m ? L.textWidthCap({fit: f, maxW: m.maxW, ref: m.ref, font, availW: m.availW}) : 0;
+  return cap > 0 ? cap.toFixed(1) + 'px' : '';
 }
 function ownSizeDefault() {
   // D10 (user, 2026-10-10): settings.font_px_default, saved once: the first Own size ever computed (1.5x Fit page), or,
@@ -1891,8 +2228,10 @@ function wireDisplay() {
 }
 function ctxOf(key, gi) {
   // the word's display context (L.wordVisible / L.placeholderKind). D2 (2026-10-10): live = a session runs or is paused
-  // and ■ was not pressed (after ■ nothing is a bar); the threshold decides what is a mistake
-  return {inRevealed: revealed.has(key), inShown: shown.has(key), gi, first: session && session.first || 0, cursor, remask,
+  // and ■ was not pressed (after ■ nothing is a bar); the threshold decides what is a mistake. #39: inCue, a word of the
+  // review card's cue (drawn greyed before the run-up; never sent as revealed)
+  return {inRevealed: revealed.has(key), inShown: shown.has(key), inCue: !!(review && review.cue.has(key)), gi,
+    first: session && session.first || 0, cursor, remask,
     live: running && !searching && !stopping && !!session, threshold, mode};
 }
 function isVisible(w, st, key, gi) {
@@ -2054,9 +2393,10 @@ function showWords(keys) {
 // of previous page"): the starter hint. Client-only: nothing saved, never a mistake (it lies before the passage, X2.4)
 let starterHintOn = false, starterHintSeq = 0, pullAt = 0;   // pullAt: the click that ends a mouse pull keeps it
 function visibleOnPage() {
-  // the words of the page shown that are visible (said, final, revealed: L.wordVisible), whatever the text mode
+  // the words of the page shown that are visible (said, final, revealed: L.wordVisible), whatever the text mode; #39: a
+  // review card's greyed cue is none (its sheet on top stays until the first word of the run-up shows)
   if (!pageData) return 0;
-  return pageData.words.filter(w => isVisible(w, stateOf(w), wkey(w), gIndex(w))).length;
+  return pageData.words.filter(w => !(review && review.cue.has(wkey(w))) && isVisible(w, stateOf(w), wkey(w), gIndex(w))).length;
 }
 function starterHintOk() { return view === 'recite' && !!pageData && L.starterHintAvailable({mode, visibleOnPage: visibleOnPage()}); }
 function pullGesture(dx, dy, top) {
@@ -2066,10 +2406,11 @@ function pullGesture(dx, dy, top) {
   if (starterHintOn && L.pullUp(dx, dy)) { pullAt = Date.now(); hideStarterHint(); return true; }
   return false;
 }
-async function showStarterHint() {
+async function showStarterHint(quiet) {
   // the previous page's last lines: the minimum that identifies the place plus 0-2 random lines above it
   // (L.starterHintLines over starter_hint's candidates, B3.8), drawn from the previous page's own payload; a page that
-  // starts a surah with its header on it (32 pages, and page 1) shows no line: the toast names the surah
+  // starts a surah with its header on it (32 pages, and page 1) shows no line: the toast names the surah. #36 review:
+  // quiet (a voice cue's sheet): that toast stays the cue's, which names the surah and says "say it again for the word"
   if (!starterHintOk()) return;
   const pd = pageData, seq = ++starterHintSeq;
   let h, nos, prev = null;
@@ -2082,14 +2423,16 @@ async function showStarterHint() {
     return;
   }
   if (seq !== starterHintSeq || pageData !== pd || !starterHintOk()) return;   // put away, another page, a word shows
-  if (!prev) { if (h && h.surah_start) setStatus(`This page starts ${h.surah_start.name}: begin with its first ayah`); return; }
+  if (!prev) { if (h && h.surah_start && !quiet) setStatus(`This page starts ${h.surah_start.name}: begin with its first ayah`); return; }
   drawStarterHint(prev, nos, h.prev_page);
 }
-function drawStarterHint(prev, nos, prevPage) {
-  // the sheet: a small caption, then the lines in the mushaf's font at the size of the page shown
+function drawStarterHint(prev, nos, prevPage, caption) {
+  // the sheet: a small caption, then the lines in the mushaf's font at the size of the page shown (#39: a review card's
+  // cue on the previous page comes with its own caption)
   const box = $('starterHint'), cap = document.createElement('div'), body = document.createElement('div');
-  cap.className = 'cap'; cap.textContent = `End of page ${prevPage}`;
+  cap.className = 'cap'; cap.textContent = caption || `End of page ${prevPage}`;
   body.className = 'lines'; body.style.fontSize = starterHintFont();
+  body.style.maxWidth = starterHintWidth();
   for (const row of starterHintRows(prev, nos)) body.appendChild(row);
   box.replaceChildren(cap, body); box.hidden = false; starterHintOn = true;
 }
@@ -2099,11 +2442,15 @@ function starterHintFont() {
   if (fit === 'free' && fitMin > 0) return (Number.isInteger(fitMin) ? fitMin : fitMin.toFixed(1)) + 'px';
   return $('text').style.fontSize;
 }
+function starterHintWidth() {
+  // #43: the sheet's lines take the page's width cap at the sheet's size (in Own size: Fit page's, as starterHintFont)
+  return fit === 'free' ? textCapCss('page', fitMin) : textCapCss(fit, shownFont);
+}
 function syncStarterHintFont() {
   // #40: the sheet keeps the size of the page shown when it changes while open (Fit page measured anew, a pinch, a
-  // rotation); a sheet drawn during a measure would keep its probe size
+  // rotation); a sheet drawn during a measure would keep its probe size. #43: and its width cap
   const body = starterHintOn ? $('starterHint').querySelector('.lines') : null;
-  if (body) body.style.fontSize = starterHintFont();
+  if (body) { body.style.fontSize = starterHintFont(); body.style.maxWidth = starterHintWidth(); }
 }
 function starterHintRows(prev, nos) {
   // prev's lines numbered `nos` as printed: its written words (U1.1e) and ayah markers, a surah header or a basmala
@@ -2142,6 +2489,7 @@ async function resetAll() {
   stopClip(true);
   if (!(await askConfirm('Reset the page? Verdicts, counters and revealed words are cleared (saved sessions stay).'))) return;
   if (running || searching || starting || stopping) return;   // a session started while the dialog was open
+  if (review) endReview();   // #39: the card's cue and strip go too
   stopReplay(true);   // D13
   revealed.clear(); shown.clear(); remask = false; states = new Map(); session = null; cursor = -1; $('summary').style.display = 'none';
   dblRec = null;   // issue #24
@@ -2418,8 +2766,14 @@ function onVoice(v) {
   if (a.toast) setStatus(a.toast);
   if (a.act === 'play') playReciter(a.words);   // a clip still playing stops; the microphone stays paused for the new one
   // #36: a replay before the first word: the ayah before, the surah's name (the device's voice, else the basmala) or
-  // the words before a found place
-  else if (a.act === 'before') playCue(L.cueSteps(a.before, {tts: !!(engine.speaker && engine.speaker.available())}));
+  // the words before a found place; v0.16 (user, 2026-10-25: "I directly say kalima, you read the hint"): the first
+  // next too, and with either, in Blind on an empty page whose session starts at its first word, the end of the page
+  // before (the #40 sheet; L.cueStarterHint)
+  else if (a.act === 'before') {
+    playCue(L.cueSteps(a.before, {tts: !!(engine.speaker && engine.speaker.available())}));
+    if (pageData && session && L.cueStarterHint({mode, visibleOnPage: visibleOnPage(), sessionFirst: session.first || 0,
+      pageFirst: gIndex(pageData.words[0] || {})})) showStarterHint(true);   // #36 review: the cue's toast stays
+  }
   else if (a.act === 'stop') stop();            // stopAudio stops the clip
   else if (a.act === 'pause') { takeOverClip(); if (!paused) pause(); else setStatus('Paused. Microphone (P) to go on, ■ (S) to save.'); }
   else stopClip(true);
@@ -2610,11 +2964,20 @@ function stillStarting(played) {
 async function start(afterSearch) {
   if (cancelModelWait()) return;   // a second press while the first waits for the model download (review 2026-10-11)
   if (!pageData || running || starting || searching) return;
+  // #39: a review card's start (startReview: startAt.review) carries it to the engine; any other start leaves the review
+  let rv = startAt && startAt.review ? startAt.review : null;
+  if (!rv && review) endReview();
   if (!afterSearch) goingOn = null;
   stopListenPlayer();   // U1.13: a recitation stops the playback
   const played = listenPresses;
   if (!(await ensureModel()) || !stillStarting(played)) { if (afterSearch) stopSearch(); return; }   // #20: no owner left
   stopListenPlayer();   // played meanwhile (the media notification, or Listen during the load)
+  stopClip(false);   // #39 review: Help me learn › Listen's Yasser stops before the microphone opens (it recorded him)
+  // #39 review: the card's start read again after the model wait (seconds on a phone's first start), from startAt as
+  // it is now: a page turned meanwhile dropped it (loadPage): a plain session there, the review over (it carried the
+  // card's meta to the wrong place)
+  rv = review && startAt && startAt.review ? startAt.review : null;
+  if (!rv && review) endReview();
   starting = true; stopping = false; $('start').disabled = true;   // one WebSocket / one microphone per Start, whatever is clicked meanwhile
   dblRec = null;   // issue #24: a new session: no double tap to undo
   document.body.dataset.bar = 'recite';   // U1.13: a recitation keeps priority over a playback (stopped above)
@@ -2642,7 +3005,8 @@ async function start(afterSearch) {
   }
   // X2.15 (user, 2026-10-04): voice commands on unless switched off in Settings (B3.8 start{voice_commands})
   sess.send({type:'start', surah, ayah_from: ayahFrom, model: $('model').value, mode, threshold, revealed: [...revealed],
-    voice_commands: $('voiceCommands').checked, ...(typeof afterSearch === 'string' ? {after_search: afterSearch} : {})});
+    voice_commands: $('voiceCommands').checked, ...(typeof afterSearch === 'string' ? {after_search: afterSearch} : {}),
+    ...(rv ? {review: rv} : {})});
   setStatus('Starting…');
 }
 // ---- X2.13 find where I am: listen, locate the recitation in the whole Qur'an, then go on with a normal session there
@@ -2658,6 +3022,7 @@ async function startSearch() {
   const played = listenPresses;
   if (!(await ensureModel()) || !stillStarting(played)) return;
   stopListenPlayer();
+  stopClip(false);   // #39 review: Help me learn › Listen's Yasser stops before the search listens (it heard him)
   starting = true; stopping = false; searchFound = null; searchStopAsked = false; searchId = null; goingOn = null;
   $('start').disabled = $('stop').disabled = true;
   document.body.dataset.bar = 'recite'; $('stop').hidden = false;
@@ -3017,6 +3382,7 @@ async function onMessage(m, s) {
     session = {id: m.session, surah: m.surah, ayahFrom: m.ayah_from, ayahTo: m.ayah_to, nWords: m.n_words, indexMap: {}, folder: null};
     ctxSince = L.markWhen(new Date());   // #34: the context of this session begins
     for (const e of m.index_map) session.indexMap[`${e.surah}:${e.ayah}`] = e.start;
+    if (review && review.phase === 'starting') reviewStarted();   // #39: the card's session runs
     if (!(await startAudio())) abortStart(null);   // keeps the "Microphone access failed" status
   }
   else if (m.type === 'state') {
@@ -3034,6 +3400,7 @@ async function onMessage(m, s) {
     $('hyp').textContent = m.hyp ? 'heard: ' + m.hyp : '';
     if (m.summary && $('summary').style.display === 'block') showSummary(m.summary);   // refresh an open box only (never pops up mid-session)
     updateCounters();
+    if (review) refreshReviewStrip();   // #39: Next fills once the card's target is done
     // X2.12 (b): only new recitation turns the page (never the answer to a mark, a Remove or a threshold change); a voice
     // command's state is new recitation (B3.8). U1.9: in the scrolling display modes the cursor stays in view. X2.4b
     // (user, 2026-10-09): words revealed by ◂ / ⏮ or a voice next / eyah come on screen instead: their page, their line
@@ -3075,6 +3442,10 @@ async function onMessage(m, s) {
     stopping = false;
     showSummary(m); updateCounters(); idleButtons();
     if (sess === s) { sess.close(); sess = null; }
+    // #39: the card's result (or back to the list after a skip, Suspend, Bury); #39 review: before the page's refresh
+    // below (Android: queued behind the engine's presets refresh), the live strip stayed meanwhile with `stopping`
+    // cleared: a second tap on filled Next recorded a skip and the result was lost
+    if (review) reviewDone(m, byCar);
     if (m.folder && pageData) {   // U1.2b: refreshed from the backend, whose readings now include this session (no double count)
       const pd = pageData;
       try {

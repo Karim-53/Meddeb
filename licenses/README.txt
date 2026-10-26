@@ -23,6 +23,7 @@ numpy_2_4_6_pyodide.txt                 NumPy 2.4.6 in Pyodide (BSD-3-Clause) an
 emscripten_runtime.txt                  Emscripten runtime and musl libc (MIT / NCSA), web app
 mit_stacktracejs.txt                    error-stack-parser and stackframe in Pyodide (MIT), web app
 chaquopy_bootstrap_packages.txt         setuptools, pyelftools and their vendored packages
+mit_py_fsrs.txt                         py-fsrs (MIT): the FSRS-6 formulas and parameters of recite/fsrs.py
 mpl_2_0.txt                             Mozilla Public License 2.0 (Mozilla CA certificates, cacert.pem; Pyodide)
 ofl_amiri_quran.txt                     Amiri Quran font (SIL OFL 1.1)
 ofl_noto_naskh_arabic.txt               Noto Naskh Arabic font (SIL OFL 1.1)

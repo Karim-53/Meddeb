@@ -30,6 +30,11 @@
     storage: () => ['GET', '/api/storage'],                         // U1.17 Settings > Space used (issue #14)
     storage_delete: (p) => ['POST', '/api/storage/delete', p],
     starter_hint: (p) => ['GET', `/api/starter_hint/${p.page}`],    // #40 the end of the page before (Blind)
+    // #39 (U1.20, B3.16): the Review page; the parameters go as the JSON body (Android: the generic call)
+    review_queue: () => ['GET', '/api/review/queue'],               // {today, counters, cards, suspended}
+    review_card: (p) => ['POST', '/api/review/card', p],            // {card} -> the run-up, the cue, the start
+    review_result: (p) => ['POST', '/api/review/result', p],        // {card, folder} -> ✓ / ✗ per ayah, the next due
+    review_action: (p) => ['POST', '/api/review/action', p],        // {card, action} -> the new queue
   };
 
   /* #36 (X2.15): the device's own voice for a surah's name before a session's first word («سورة البقرة»; no reciter file
@@ -93,6 +98,10 @@
   class HttpEngine {
     constructor() {
       this.kind = 'http'; this.nativeMic = false;
+      // #39 (user, 2026-10-25: "only the Android app, not the web for now"): what this engine offers beyond the
+      // shared calls; the PC has the review calls (server.py) so the page can be tried there; an engine without
+      // `features` (the web's) has none
+      this.features = {review: true};
       this.onModelDownload = null;   // D2 (v0.9): never called on the PC (the models are on disk, B3.1)
       this.update = null; this.onUpdate = null;   // P5.16: the PC updates with git; no app update
       // U1.13: the page's player (static/listen_player.js; null when that file is missing: Listen then says so)
@@ -184,6 +193,7 @@
   class AndroidEngine {
     constructor() {
       this.kind = 'android'; this.nativeMic = true;
+      this.features = {review: true};   // #39: the review calls (meddeb_android.py, through the generic call)
       this.pending = new Map(); this.nextId = 1; this.session = null; this.onProgress = null;
       // D2 (v0.9): Kotlin downloads the speech model by itself (D1): its model_download events {state: running | done |
       // failed, pct, bytes, total, error, retry_s} go to onModelDownload, with or without a session
