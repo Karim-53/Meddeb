@@ -1,25 +1,23 @@
 {
  "format": 1,
  "app_id": "io.github.karim53.meddeb",
- "version_code": 15,
- "version_name": "0.15",
- "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.15/meddeb_v0.15.apk",
- "size": 73919253,
- "sha256": "8acce94d95b79a2d0f1960b05588dbb159c7c51d29737ed5d525f52a82bbd6af",
+ "version_code": 16,
+ "version_name": "0.16",
+ "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.16/meddeb_v0.16.apk",
+ "size": 74023915,
+ "sha256": "1abe5da7258b5d8fd94cd23e6570acabb4a711621a99327141e1fb2a5822b12f",
  "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
  "min_sdk": 26,
  "min_version_code": 0,
- "released": "2026-10-24",
+ "released": "2026-10-26",
  "notes": [
-  "New: Listen can vary where each repeated play starts and ends (up to 4 ayat), fade out inside the extra ayah, and pause between plays.",
-  "New: Settings > Updates > Auto update on Wi-Fi (off by default); the Settings page is now grouped in sections.",
-  "New: in Blind mode, pull down on an empty page to see the end of the page before, just enough to know where you are.",
-  "New: the replay voice command before your first word plays the ayah before, or says the surah's name.",
-  "New: in the car, Recite plays the ayah before (or says the surah's name) when it starts.",
-  "New: the Progress table names the surah of each page.",
-  "Fix: starting to recite in the middle of a page is followed, also after a link of the Progress page.",
-  "Fix: Play word and Play ayah replay the right part after a word marked \"lost\".",
-  "Change: a double tap on an old mistake adds a new one; it removes only a mistake of this session or one you just added."
+  "New: a Review page (spaced repetition): words you get wrong twice in their last 5 readings become cards, tested in Blind at the right time.",
+  "New: Review cards show only a few lines before the spot, fewer as you improve; Next skips or ends a card; Help me learn after a fail.",
+  "New: before your first word, the first \"next word\" voice command plays the ayah before (or says the surah name); the second shows the word.",
+  "New: more ways to say the replay voice command, for example \"a'idha marra\" or \"'awedli\".",
+  "Fix: a slow ta'awwudh and basmala no longer hide the first words of the surah in Blind and Hidden.",
+  "Change: the Progress table shows how many days ago each page was revised, one line per page.",
+  "Change: on wide screens the mushaf text is centred instead of spreading the words apart."
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html"
 }
