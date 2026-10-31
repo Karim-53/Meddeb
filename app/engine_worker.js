@@ -124,7 +124,7 @@ async function onSession(msg) {
     await persist();
   } else if (!sessOpen) {
     /* nothing open: ignored, as the server does */
-  } else if (['hint', 'skip_to', 'mark', 'unmark', 'threshold', 'summary'].includes(kind)) {
+  } else if (['hint', 'skip_to', 'mark', 'unmark', 'threshold', 'summary', 'mode'].includes(kind)) {   // mode: #73 (no reply)
     drain();
     const r = json(M.session_command(JSON.stringify(msg)));
     if (r) emit(r);
@@ -161,8 +161,16 @@ self.onmessage = (ev) => {
     }));
   } else if (op === 'log') {
     reply(enqueue(async () => { M.log(String(d.text)); await persist(); return true; }));
-  } else if (op === 'files') {   // the export: every profile file (a Blob for a large one), after the last save
-    reply(enqueue(async () => { await persist(); return pfs.listFiles('profile1'); }));
+  } else if (op === 'files') {   // the export, after the last save: D4.9 (#71, v0.19) the files of the kinds asked (null:
+    // all; Python's export_files, the logs with the settings, v0.8's old reports never), export.json first
+    reply(enqueue(async () => {
+      await persist();
+      const r = json(M.call('export_files', JSON.stringify({kinds: d.kinds || null})));
+      const keep = new Set(r.files.map(([rel]) => rel));
+      const manifest = new TextEncoder().encode(JSON.stringify(r.manifest, null, 1) + '\n');
+      return [{rel: 'export.json', size: manifest.length, bytes: manifest},
+        ...pfs.listFiles('profile1').filter((f) => keep.has(f.rel))];
+    }));
   } else if (op === 'import') {   // D4.4: the zip stays a Blob; Python reads it through a read-only file
     reply(enqueue(async () => {
       const path = '/tmp/meddeb_import.zip';

@@ -37,8 +37,9 @@
   const RETRIES = 1;   // a clip that fails to load is retried once (a network hiccup), then the state is 'error'
   const RETRY_MS = 1500;
   // #31 (user, 2026-10-24): the pause between plays (Vary on with a pause of 0: 0.25 s, the phone's rule: it swaps in the
-  // next play's ayat during it), the fade-out over 1.8 s ending on the cut, checked every 50 ms
-  const MIN_GAP_MS = 250, FADE_MS = 1800, FADE_TICK_MS = 50;
+  // next play's ayat during it), the fade-out over 3 s (#89, D15 of v0.20; 1.8 s before) ending on the cut, checked
+  // every 50 ms
+  const MIN_GAP_MS = 250, FADE_MS = 3000, FADE_TICK_MS = 50;
 
   class MeddebListenPlayer {
     constructor() {
@@ -155,21 +156,30 @@
       this._cancelRetry(); this._stopFade(); this.attempt++;
       const clip = this._clip(), url = clipUrl(this.plan.reciter, clip);
       const other = 1 - this.cur;
-      if (this.els[other].dataset.url === url && this.els[other].readyState >= 2) this.cur = other;   // preloaded
+      // #75: the other element holds this clip (preloaded): it plays whatever its readyState (play() waits for the data
+      // itself; v0.19 loaded the file again below readyState 2, the gap between two ayat on the web)
+      const preloaded = this.els[other].dataset.url === url && !this.els[other].error;
+      if (preloaded) this.cur = other;
       // the element left behind is silenced: _preloadNext does not always give it a new file (the last clip, or it already
       // holds the one after: previous / next on a 2-clip plan), and two recitations must never play over each other
       try { this.els[1 - this.cur].pause(); } catch (e) { /* not playing */ }
       for (const e of this.els) e.volume = 1;   // #31: after a fade-out
       const a = this.els[this.cur];
-      if (a.dataset.url !== url || a.error) { a.dataset.url = url; a.src = url; } else a.currentTime = 0;
-      this._set('loading');
+      // #75: no seek on a file already at its start (a seek makes the browser wait for data again)
+      if (a.dataset.url !== url || a.error) { a.dataset.url = url; a.src = url; } else if (+a.currentTime) a.currentTime = 0;
+      // #75: play() first, before the page hears of it (its redraw used to delay the next ayah); a preloaded clip that
+      // follows a playing one says nothing until its 'playing' event, anything else says 'loading' (unless play() already
+      // failed: its state stays)
+      const before = this.status;
       this._playCurrent();
       this._preloadNext();
+      if ((!preloaded || before !== 'playing') && this.status === before) this._set('loading');
       if (clip.fade_ms != null) this._watchFade(a, +clip.fade_ms);
     }
 
-    /** #31: the last extra ayah of a varied play fades out over 1.8 s and stops on its cut (a word start in its middle),
-     *  leaving the rest to the listener's memory; then the next play (after the pause) or the end. */
+    /** #31: the last extra ayah of a varied play fades out and stops on its cut (a word start in its middle), leaving
+     *  the rest to the listener's memory; then the next play (after the pause) or the end. #89 (D15, v0.20): over 3 s,
+     *  the ramp capped at the cut (a cut 2 s into the ayah fades from its start). */
     _watchFade(a, endMs) {
       const L = logic();
       this.fadeTimer = setInterval(() => {
@@ -178,7 +188,7 @@
         // fade: no cut and no next play behind it; it goes on after the resume
         if (a.paused || !['playing', 'loading'].includes(this.status)) return;
         const t = (+a.currentTime || 0) * 1000;
-        if (t < endMs) { a.volume = L ? L.fadeVolume(t, endMs, FADE_MS) : 1; return; }
+        if (t < endMs) { a.volume = L ? L.fadeVolume(t, endMs, Math.min(FADE_MS, endMs)) : 1; return; }
         this._stopFade();
         a.dataset.cut = '1';   // our own pause: the 'pause' listener does not report it
         try { a.pause(); } catch (e) { /* not playing */ }

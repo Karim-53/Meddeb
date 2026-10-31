@@ -9,7 +9,7 @@
    browser (U1.5), the bug report (U1.16); and of 2026-10-11 (v0.9): the model download on a fresh phone with its small
    progress bar (D2, B3.13), the toasts that hide by themselves, the bug report's toast (D3); and of 2026-10-17 (v0.12):
    the mark drawn before the engine answers (historyAfterMark, issue #23), the double tap and its undo (wordTapStep,
-   doubleTapPlan, issue #24); and of 2026-10-25 (v0.16): the cue of the first voice «next» with its starter hint
+   doubleTapPlan, issue #24; since v0.18 doubleTapStep, the graph of #67); and of 2026-10-25 (v0.16): the cue of the first voice «next» with its starter hint
    (cueStarterHint, #36), the Review page (reviewCounters ... reviewResultView, #39). No DOM here. */
 (function (root) {
   'use strict';
@@ -39,14 +39,35 @@
     return outcome === 'mistake' ? 'Remove mistake' : outcome === 'ok' ? 'Remove correct' : 'Remove last';
   }
 
+  // #67: what a label of the user's adds to a word's state, the page's own (never sent): auto (the session's own state
+  // under his first label, the tracker's `auto`), via ('mark': the label is a double tap's own event after ■, undone by
+  // `undo`), unshow (a bar of Hidden / Blind before the label: a bar again once undone), prev / prevH (the state and the
+  // history before a double tap's own event, drawn back by its undo), viaGap (#72: that own event was a double tap in
+  // the gap before the word: only another one there undoes it). = recite/app.py _LABEL_KEYS
+  const LABEL_KEYS = ['auto', 'via', 'unshow', 'prev', 'prevH', 'viaGap'];
+  function plainState(st) { const o = Object.assign({}, st); for (const k of LABEL_KEYS) delete o[k]; return o; }
+
   /** After Stop, a mark on a word of the finished session also changes how that word is drawn: + Mistake makes it a
    *  mistake, + Correct and Remove make it correct (Remove on a mistake = read correctly; on a correct reading = no
-   *  mistake either). Before 2026-09-28 the page kept the session's red after "Remove" (bug 5). */
-  function stateAfterMark(st, event) {
-    const out = Object.assign({}, st || {status: 'pending', score: 0, hyp: null});
-    if (event === 'mistake') { out.status = 'wrong'; out.score = 1; }
+   *  mistake either). Before 2026-09-28 the page kept the session's red after "Remove" (bug 5). #67 (v0.18): the
+   *  verdict under the user's first label stays with the word (auto: the session's own state; none under a pending
+   *  word), a label over a label keeps it; 'unmark' gives it back (no auto: his own reading stays as it is). #72
+   *  (v0.19, X2.12b): o.ins with 'mistake' = an insertion before the word (ins); any other mark clears it (a plain +
+   *  Mistake is a mistake of the word itself); 'unmark' gives Meddeb's nature back with its verdict. */
+  function stateAfterMark(st, event, o) {
+    const base = st || {status: 'pending', score: 0, hyp: null};
+    if (event === 'unmark') {
+      if (!base.auto) return plainState(base);
+      const back = plainState(base); delete back.ins;
+      return Object.assign(back, {user: false, concealed: false}, base.auto);
+    }
+    const auto = base.user ? base.auto : (base.status && base.status !== 'pending' ? plainState(base) : null);
+    const out = plainState(base);
+    delete out.ins;
+    if (event === 'mistake') { out.status = 'wrong'; out.score = 1; if (o && o.ins) out.ins = true; }
     else { out.status = 'ok'; out.score = 0; out.lost = false; }
     out.user = true; out.concealed = false;
+    if (auto) out.auto = auto;
     return out;
   }
 
@@ -57,15 +78,43 @@
    *  + Mistake / + Correct append the user's reading; Remove turns a last mistake into the user's correct reading
    *  (read, and read correctly) and drops a last correct one. A new object: h is left as it was (put back on a failed
    *  save). Exact but for what the page cannot know: a relabelled reading (issue #5) and a reading older than the 10 it
-   *  has coming back after a Remove. when = 'yyyy-mm-dd hh:mm' (markWhen). */
-  function historyAfterMark(h, event, when) {
+   *  has coming back after a Remove. when = 'yyyy-mm-dd hh:mm' (markWhen). #67 (v0.18): a reading keeps `last` (the
+   *  newest saved session's, summarize's newest; a mark then amends that session, issue #17), the user's correct
+   *  reading made by a Remove says the tracker's verdict under it (`ai`); 'unmark' gives the session its own readings
+   *  back (those of the newest session; without `last`, the newest reading): the user's label is the tracker's verdict
+   *  again, a mark amending it goes; 'undo' (with no state kept: the newest mark of his goes, a Remove's reading is the
+   *  tracker's again). Unmark and undo cannot know what was heard: the engine's answer says it. #67 review: a mark
+   *  amending the newest session's reading (a popover button or a double tap's own mark after ■: `last`) says so,
+   *  `amends`, with that session's own verdict as `ai` (summarize): an unmark drops it, an undo pops it. #72 (v0.19,
+   *  X2.12b): o.ins with 'mistake' = an insertion (`ins`); a Remove of Meddeb's insertion keeps its nature (`ai_ins`),
+   *  which an unmark or an undo gives back. */
+  function historyAfterMark(h, event, when, o) {
     let rs = h && h.readings ? h.readings.slice() : [];
-    const last = rs[rs.length - 1];
+    const last = rs[rs.length - 1], ofLast = rs.some(r => r.last);
+    const tag = (r, src) => (src && src.last ? Object.assign(r, {last: true}) : r);
+    const meddebs = (r) => tag(Object.assign({when: r.when, outcome: r.ai, heard: null, source: 'session'},
+      r.ai === 'mistake' && r.ai_ins ? {ins: true} : {}), r);
+    // the newest session's own verdict on the word: its reading (Meddeb's, or a label of the user's over it)
+    const own = rs.filter(r => r.last && !r.amends).pop();
+    const ownAi = !own ? null : own.source === 'session' ? own.outcome : own.ai || null;
     if (event === 'remove') {
-      if (last && last.outcome === 'mistake') rs[rs.length - 1] = {when: last.when, outcome: 'ok', heard: null, source: 'mark'};
-      else if (last) rs.pop();
+      if (last && last.outcome === 'mistake') {
+        const ai = last.source === 'session' ? 'mistake' : last.ai;   // #69 / #67: the tracker's verdict under it
+        const aiIns = ai === 'mistake' && (last.source === 'session' ? !!last.ins : !!last.ai_ins);   // #72
+        rs[rs.length - 1] = tag(Object.assign({when: last.when, outcome: 'ok', heard: null, source: 'mark'}, ai ? {ai} : {},
+          aiIns ? {ai_ins: true} : {}, last.amends ? {amends: true} : {}), last);
+      } else if (last) rs.pop();
     } else if (event === 'mistake' || event === 'correct') {
-      rs.push({when, outcome: event === 'mistake' ? 'mistake' : 'ok', heard: null, source: 'mark'});
+      rs.push(tag(Object.assign({when, outcome: event === 'mistake' ? 'mistake' : 'ok', heard: null, source: 'mark'},
+        event === 'mistake' && o && o.ins ? {ins: true} : {},
+        ofLast && ownAi ? {ai: ownAi} : {}, ofLast ? {amends: true} : {}), {last: ofLast}));
+    } else if (event === 'unmark') {
+      // the newest session's readings (without `last`: the newest reading): its own verdict back, the marks amending
+      // it gone, a reading of the user's with no verdict of Meddeb's under it (#49) kept
+      rs = rs.flatMap((r, k) => (!(ofLast ? r.last : k === rs.length - 1) || r.source !== 'mark' ? [r]
+        : r.amends ? [] : r.ai ? [meddebs(r)] : ofLast ? [r] : []));
+    } else if (event === 'undo') {
+      if (last && last.source === 'mark') { if (last.ai && !last.amends) rs[rs.length - 1] = meddebs(last); else rs.pop(); }
     } else return h;
     rs = rs.slice(-HISTORY_DEPTH);
     if (!rs.length) return null;
@@ -89,16 +138,19 @@
    *  page then sends ev = {type: 'timer'}: action 'open' (key = the word to open) while that tap is still pending, else
    *  'none' (a stale timer: a double tap came, or the popover already opened). Each tap re-arms the page's timer, so a
    *  tap on another word moves the popover there. The opened popover counts as open for a second tap that comes just
-   *  then (keepPop). */
+   *  then (keepPop). #72 (v0.19, X2.12b): a tap in the gap before a word has the key 'gap:s:a:idx': two in the same gap
+   *  are a double tap (gap: true); a single one opens nothing (its timer says 'none'). */
   function wordTapStep(state, ev) {
     const s = state || {};
+    const gap = (k) => String(k).startsWith('gap:');
     if (ev.type === 'timer')
-      return s.pending
+      return s.pending && !gap(s.key)
         ? {state: Object.assign({}, s, {open: true, pending: false}), action: 'open', key: s.key, keepPop: false}
         : {state: s, action: 'none', keepPop: false};
     const dt = ev.t - s.t;
     if (s.key != null && ev.key === s.key && dt >= 0 && dt <= DOUBLE_TAP_MS)
-      return {state: {key: null, t: 0, open: false, pending: false}, action: 'double', keepPop: !!s.open};
+      return Object.assign({state: {key: null, t: 0, open: false, pending: false}, action: 'double', keepPop: !!s.open},
+        gap(ev.key) ? {gap: true} : {});
     return {state: {key: ev.key, t: ev.t, open: !!ev.open, pending: true}, action: 'single', delay: POP_DELAY_MS,
       keepPop: false};
   }
@@ -114,43 +166,216 @@
     return !!last && !!since && last.outcome === 'mistake' && last.source === 'mark' && String(last.when || '') >= String(since);
   }
 
-  /** Issue #24 (D3): what a double tap does. rec = what the last double tap left (its record, null: none); o = {key,
-   *  ctx ('live:<id>' the running session, 'saved:<id>' a finished or loaded one, 'none'), live (a word of the running
-   *  session), st (its session state), threshold, lastOutcome (its newest reading), history (its history summary),
-   *  settled (the history shown is final for the session on screen: a loaded one, a finished one once the page was
-   *  refreshed after its `done`, or one too short to be saved, whose readings never join the history), since (#34: when
-   *  the context on screen began, the page's ctxSince)}.
-   *  A mistake: a session verdict that is one (at the threshold, or being confirmed, taupe); #34 (v0.15): for a word
-   *  with no verdict on screen, only a mistake of the context (contextMistake): an older one gets a new mistake (v0.12
-   *  removed any newest reading that was a mistake, Claude's D3, and turned yesterday's mistake into "ok (you)").
-   *  Returns {act, record (what the next double tap undoes), toast}:
-   *  - the undo, when rec is this word in this context and the word is still as that double tap left it: the act it
-   *    recorded (live: unmark, or the user's earlier verdict again; else the "undo" event), with the state (and the
-   *    history) to draw at once; record null;
-   *  - a word not recited yet in the running session: act null, rec kept (the popover only);
-   *  - review of v0.12 (#24): a mistake of a session on screen whose word's newest reading is correct (settled; e.g.
-   *    an older session loaded with ◀, read right since): act null, rec kept, a toast. The `remove` event acts on the
-   *    newest reading, so it would drop that correct reading and leave the old mistake as the word's state;
-   *  - else live: mark wrong / ok (as + Mistake / Remove mistake); not live: the event 'mistake' / 'remove'. */
-  function doubleTapPlan(rec, o) {
-    const st = o.st || {status: 'pending', score: 0};
-    const pending = !st.status || st.status === 'pending';
-    const bad = pending ? contextMistake(o.history, o.since) : (isMistake(st, o.threshold) || confirming(st, o.threshold));
-    if (rec && rec.key === o.key && rec.ctx === o.ctx && rec.bad === bad) return {act: rec.undo, record: null, toast: 'Undone'};
-    if (o.live && pending) return {act: null, record: rec || null, toast: null};
-    if (!o.live && !pending && bad && o.settled && o.lastOutcome === 'ok')
-      return {act: null, record: rec || null, toast: 'Its latest reading is correct: no mistake to remove'};
-    const snap = pending ? null : Object.assign({}, st);
-    let act, undo;
-    if (o.live) {
-      act = {kind: 'mark', status: bad ? 'ok' : 'wrong'};
-      undo = st.user ? {kind: 'mark', status: MISTAKE.has(st.status) ? 'wrong' : 'ok', state: snap} : {kind: 'unmark', state: snap};
-    } else {
-      act = {kind: 'event', event: bad ? 'remove' : 'mistake'};
-      undo = {kind: 'event', event: 'undo', state: snap, history: o.history == null ? null : o.history};
+  // #67 (user, 2026-10-29, Meddeb 0.17: "this was detected as mistake. I did double clic on it (so it should be marked
+  // as this was not a mistake all good). but I did double clic again so it should be back to the previous state of AI
+  // detected mistake not manually labeled mistake"; the graph of the issue's comment, 02_requirements X2.12). The
+  // double tap moves a word along the user's graph, from the word's own state: S00 Meddeb's correct word ⇄ S01 "AI said
+  // ok but manually labeled mistake"; S11 Meddeb's mistake ⇄ S10 "AI detected mistake and you keep the nature of it
+  // (skip or ...), but manually labeled ok"; S11* a hint of the running session ⇄ S10* "undo the hint labeling"; S00*
+  // a word Meddeb has no verdict on now (none, correct ones, an older mistake) ⇄ S01* "manually labeled mistake". v0.12-
+  // 0.17 toggled "a mistake on screen or not" and kept one undo record (dblRec) that ■, a popover button, Start or a
+  // loaded session ended: past it, Meddeb's mistake marked correct was a correct word like any other, and the double
+  // tap again made it a manual mistake (the issue)
+  const bad = (st, thr) => isMistake(st, thr) || confirming(st, thr);
+
+  /** #67: what Meddeb's verdict was, in the popover's words: lost / wrong / skipped / a hint / being confirmed. */
+  function aiNature(st) {
+    const s = String(st && st.status || '');
+    if (s.startsWith('provisional')) return 'being confirmed';
+    if (st.ins && s === 'wrong') return 'insertion';   // #72 (v0.19, X2.12b)
+    if (st.lost) return 'lost';
+    return {wrong: 'wrong', missing: 'skipped', hinted: 'hint'}[s] || s;
+  }
+
+  /** #67: the graph's state of a word with a verdict in the session on screen (live: the running one, paused too; else
+   *  finished or loaded). Not the user's: S11* (a hint, live only: after ■ a hint is the last session's mistake like
+   *  any other, S11), S11 (a mistake at the threshold, or being confirmed) or S00. The user's label: over Meddeb's
+   *  verdict (auto) S10* (the hint removed), S10 (Meddeb's mistake, his correct), S01 (Meddeb's correct, his mistake),
+   *  or Meddeb's own state when he agrees with it (S11* while a hint is still counted); with no verdict of Meddeb's
+   *  under it (#49: read in the mind; a session saved before v0.18) S01* / S00*. */
+  function labelState(st, thr, live) {
+    if (!st.user) return st.hinted && live ? 'S11*' : bad(st, thr) ? 'S11' : 'S00';
+    // page review 2026-10-29 (F4): a label on a word the tracker had not reached (auto pending, markSelected) is over
+    // Meddeb's "not recited yet" while the session runs (S01 / S00: its unmark gives pending back, as Tracker.unmark);
+    // once ■ is pressed it is no verdict of Meddeb's (the history keeps the label, session_load gives no auto)
+    const a = st.auto && (live || String(st.auto.status || 'pending') !== 'pending') ? st.auto : null;
+    if (!a) return MISTAKE.has(st.status) ? 'S01*' : 'S00*';
+    if (a.hinted && st.hinted) { if (live) return 'S11*'; }
+    else if (a.hinted) return 'S10*';
+    const aiBad = bad(a, thr), userBad = MISTAKE.has(st.status);
+    // #72 (v0.19, X2.12b): both a mistake, the nature not Meddeb's (an insertion relabelled a mistake of the word, or
+    // the other way): S1i, whose double tap gives Meddeb's verdict back
+    if (aiBad && userBad && !!a.ins !== !!st.ins) return 'S1i';
+    if (aiBad === userBad) return aiBad ? 'S11' : 'S00';
+    return aiBad ? 'S10' : 'S01';
+  }
+
+  /** #67: the graph's state of a word with no verdict on screen, from its history (h: the summary; since: #34, when
+   *  the context on screen began): S11 its newest reading is Meddeb's mistake of the newest saved session (`last`: the
+   *  user's S11 with the microphone off, "still written in red"), S10 / S01 the user's label there over Meddeb's verdict
+   *  (`ai`), S01* a mistake he added in this context (#34, contextMistake), else S00* (no reading, correct ones, a
+   *  mistake of an older session, #34's «انزل», or an older one of his). */
+  function historyState(h, since) {
+    const r = h && h.readings, last = r && r.length ? r[r.length - 1] : null;
+    if (!last) return 'S00*';
+    if (last.source === 'session') return last.outcome === 'mistake' && last.last ? 'S11' : 'S00*';
+    if (last.ai && last.last) {
+      const aiBad = last.ai === 'mistake', userBad = last.outcome === 'mistake';
+      if (aiBad !== userBad) return aiBad ? 'S10' : 'S01';
+      if (aiBad) return 'S11';
     }
-    return {act, record: {key: o.key, ctx: o.ctx, bad: !bad, undo},
-      toast: (bad ? 'Mistake removed' : 'Marked as a mistake') + ': double tap again to undo'};
+    return contextMistake(h, since) ? 'S01*' : 'S00*';
+  }
+
+  const DT_FORWARD = {S00: 'S01', 'S00*': 'S01*', S11: 'S10', 'S11*': 'S10*'};
+  const DT_TOAST = {S00: 'Marked as a mistake', 'S00*': 'Marked as a mistake', S11: 'Mistake removed',
+    'S11*': 'Hint removed'};
+
+  /** #67: what a double tap does. o = {where: 'live' (a word of the running session, paused too: the tracker's mark /
+   *  unmark), 'after' (a verdict of a finished or loaded session on screen: marks.jsonl), 'none' (no verdict on screen:
+   *  no session, a word outside it or not recited in it; marks.jsonl), st (its state in the session on screen), threshold,
+   *  history (its summary), when (markWhen(now)), since (#34: ctxSince), settled (after: the page's history is final
+   *  for the session on screen), saving (after: ■ pressed, the session not saved yet), unsaved (after: too short to be
+   *  saved)}. Returns {from, to (the graph's states), act, st (the session state to draw; live / after), history (the
+   *  summary to draw; after / none), toast}. act:
+   *  - live: {kind: 'mark', status: 'wrong' | 'ok', unhint?: true} (S00 / S00* -> S01 / S01*, S11 -> S10, S11* -> S10*;
+   *    S01* -> S00*: mark ok, his own reading again) or {kind: 'unmark'} (S01 / S10 / S10* back: Meddeb's verdict,
+   *    the hint too, the engine's tracker restores them; the page draws `auto` at once);
+   *  - after / none: {kind: 'event', event}: 'mistake' (-> S01 / S01*), 'remove' (S11 -> S10; and S01* of a session
+   *    saved before v0.18), 'undo' (a double tap's own mark undone, S01* of #34), 'unmark' (a label of the user's on
+   *    that session: its own verdict back, Profile.add_mark);
+   *  - {kind: 'draw'}: a session too short to be saved: nothing saved, the page draws Meddeb's verdict (S10 / S01 /
+   *    S10* back), S11 -> S10 and S01* -> S00* (page review 2026-10-29, F5: never `remove`, which acted on an older
+   *    session's reading);
+   *  - null: a word not recited yet in the running session, the session still being saved, or (v0.12 review) a red
+   *    word of a session on screen whose newest reading is correct (Remove would act on that newer reading).
+   *  #72 (v0.19, X2.12b; user, 2026-10-29: "if I double clic manually between words i do that"): o.ins = a double tap
+   *  in the gap before the word. There a word that is no mistake becomes an insertion (`mark wrong ins` / `mistake
+   *  ins`), an insertion goes along #67's edge (Meddeb's removed, the user's back), a plain mistake is relabelled an
+   *  insertion (S1i over Meddeb's); on the word itself an insertion is relabelled a plain mistake of the word (S1i).
+   *  S1i's double tap gives Meddeb's verdict back. With no verdict on screen: the gap adds `mistake ins` unless the
+   *  newest reading is an insertion (#67's edge; one the user added in this context: `undo`); the word's is #67's. */
+  function doubleTapStep(o) {
+    o = o || {};
+    const thr = o.threshold, st = o.st || {status: 'pending', score: 0}, h = o.history == null ? null : o.history;
+    const pending = !st.status || st.status === 'pending';
+    const live = o.where === 'live', gap = !!o.ins;
+    if (live && pending) return {from: 'pending', to: 'pending', act: null, toast: null};
+    const again = ': double tap again to undo';
+    const toast = (from, back) => (back ? 'Undone' : (gap ? 'Insertion removed' : DT_TOAST[from]) + again);
+    if (o.where !== 'after' && !live || pending) {
+      let from = historyState(h, o.since), back = !DT_FORWARD[from];
+      let event = {'S00*': 'mistake', S11: 'remove', S10: 'unmark', S01: 'unmark', 'S01*': 'undo'}[from];
+      let ins = false;
+      if (gap) {   // #72: the gap's own rule
+        const r = h && h.readings, lastR = r && r.length ? r[r.length - 1] : null;
+        const lastIns = !!(lastR && lastR.ins && lastR.outcome === 'mistake');
+        if (lastIns && lastR.source === 'mark' && contextMistake(h, o.since)) { event = 'undo'; back = true; }
+        else if (!lastIns || event === 'mistake') { event = 'mistake'; ins = true; back = false; }
+      }
+      const history = historyAfterMark(h, event, o.when, {ins});
+      // a word not recited in a finished or loaded session on screen: drawn as the double tap's own mark there (#34),
+      // which the next one undoes exactly; a word of no session on screen: st is not drawn (the page has none)
+      const next = event === 'mistake' || event === 'remove'
+        ? Object.assign(stateAfterMark(st, event, {ins}), {via: 'mark', prev: plainState(st), prevH: h}, gap ? {viaGap: true} : {})
+        : plainState(st);
+      return {from, to: historyState(history, o.since), act: Object.assign({kind: 'event', event}, ins ? {ins: true} : {}),
+        st: next, history, toast: ins ? 'Marked as an insertion' + again : toast(from, back)};
+    }
+    const from = labelState(st, thr, live), back = !DT_FORWARD[from];
+    const out = (act, next, history, text) => Object.assign({from, act, st: next, toast: text || toast(from, back),
+      // a word drawn back to not recited (#34's mark undone): its history says where it is
+      to: !next.status || next.status === 'pending' ? historyState(history === undefined ? h : history, o.since)
+        : labelState(next, thr, live)}, history !== undefined ? {history} : {});
+    const auto = st.user ? st.auto : plainState(st);
+    // #72: the ins dimension. 'ins': the gap marks an insertion (a word that is no mistake; a plain mistake relabelled);
+    // 'plain': the word's own double tap on an insertion relabels it a plain mistake of the word; null: #67's graph
+    // (S1i and S10 over Meddeb's insertion go back; an insertion in the gap goes along its edge)
+    const stIns = !!st.ins && MISTAKE.has(st.status);
+    const insAct = from === 'S1i' || (gap && from === 'S10' && st.auto && st.auto.ins) ? null
+      : gap && !stIns ? 'ins' : !gap && stIns ? 'plain' : null;
+    const insText = insAct === 'ins' ? 'Marked as an insertion' + again : 'Marked as a mistake of the word' + again;
+    // review of #72: live, the gap's own mark (viaGap, prev: the state before it) is undone by the next double tap in
+    // that gap, to that state: Meddeb's verdict (unmark: a hint too) or the user's own label again (mark), never
+    // Meddeb's verdict under his label (S10 / S01 / S01* / S10*), nor a hint taken away (S11* -> S10*)
+    const bare = (s) => { const c = Object.assign({}, s); delete c.via; delete c.prev; delete c.prevH; delete c.viaGap; return c; };
+    if (live && gap && st.viaGap && st.prev) {
+      const prev = bare(st.prev);
+      if (!prev.user) return out({kind: 'unmark'}, Object.assign({}, st.auto || prev), undefined, 'Undone');
+      const wrong = MISTAKE.has(prev.status);
+      return out(Object.assign({kind: 'mark', status: wrong ? 'wrong' : 'ok'}, wrong && prev.ins ? {ins: true} : {}), prev,
+        undefined, 'Undone');
+    }
+    if (live && insAct) {
+      const next = Object.assign(plainState(st), {status: 'wrong', score: 1, user: true}, auto ? {auto} : {},
+        gap ? {prev: bare(st), viaGap: true} : {});
+      delete next.ins;
+      if (insAct === 'ins') next.ins = true;
+      return out(Object.assign({kind: 'mark', status: 'wrong'}, insAct === 'ins' ? {ins: true} : {}), next, undefined, insText);
+    }
+    if (live) {
+      if (from === 'S01*') return out({kind: 'mark', status: 'ok'}, Object.assign(plainState(st), {status: 'ok', score: 0}));
+      if (back) return out({kind: 'unmark'}, Object.assign({}, st.auto));
+      const next = Object.assign(plainState(st), from === 'S00' || from === 'S00*' ? {status: 'wrong', score: 1}
+        : {status: 'ok', score: 0, concealed: false}, {user: true}, auto ? {auto} : {});
+      if (from === 'S11*') { next.hinted = false; return out({kind: 'mark', status: 'ok', unhint: true}, next); }
+      return out({kind: 'mark', status: next.status}, next);
+    }
+    // after ■ (or a loaded session): a double tap's own mark is undone exactly, with the state and history it changed
+    // page review 2026-10-29 (F2): a 'via' state that lost what it changed (prev / prevH) draws not recited and the
+    // history's own undo, never an empty state (a TypeError in the popover) and an empty history. #72: by a double tap
+    // of the same kind (in the gap, or on the word): the other kind acts on the state the own mark drew
+    if (st.via === 'mark' && !!st.viaGap === gap)
+      return out({kind: 'event', event: 'undo'}, Object.assign({}, st.prev || {status: 'pending', score: 0, hyp: null}),
+        st.prevH === undefined ? historyAfterMark(h, 'undo', o.when) : st.prevH, 'Undone');
+    const own = (event, ins, text) => {
+      const prev = Object.assign({}, st); delete prev.via; delete prev.prev; delete prev.prevH; delete prev.viaGap;
+      return out(Object.assign({kind: 'event', event}, ins ? {ins: true} : {}),
+        Object.assign(stateAfterMark(st, event, {ins}), {via: 'mark', prev, prevH: h}, gap ? {viaGap: true} : {}),
+        historyAfterMark(h, event, o.when, {ins}), text);
+    };
+    if (insAct) return own('mistake', insAct === 'ins', insText);   // #72
+    if (from === 'S00' || from === 'S00*') return own('mistake');
+    if (from === 'S11') {
+      // page review 2026-10-29 (F5): a session too short to be saved has no reading in the history: `remove` acted on
+      // an older session's; the page alone draws S10 (Meddeb's verdict kept as auto: the next double tap draws it back)
+      if (o.unsaved) return out({kind: 'draw'}, stateAfterMark(st, 'remove'));
+      // v0.12 review (#24): `remove` acts on the word's newest reading: a correct one of a newer session stays
+      if (o.settled && lastOutcome(h) === 'ok')
+        return {from, to: from, act: null, toast: 'Its latest reading is correct: no mistake to remove'};
+      return own('remove');
+    }
+    if (from === 'S01*') {
+      // #67 review: a mistake the user added in this context (+ Mistake in the popover after ■, e.g. on a word the
+      // session never recited: #34's S01*) is undone, the state drawn back as it was before it (the popover's mark
+      // keeps it, prev; else not recited): `remove` made it "ok (you)", a reading Progress counted. A label of the
+      // session itself with no verdict of Meddeb's under it (a session saved before v0.18: its own reading, `last`
+      // without `amends`, or older than the context) is made correct (`remove`)
+      const r = h && h.readings, lastR = r && r.length ? r[r.length - 1] : null;
+      if (contextMistake(h, o.since) && !(lastR.last && !lastR.amends))
+        return out({kind: 'event', event: 'undo'}, Object.assign({}, st.prev || {status: 'pending', score: 0, hyp: null}),
+          historyAfterMark(h, 'undo', o.when));
+      // page review (F5): a session too short to be saved: the page alone, as the live S01* edge (his correct reading)
+      if (o.unsaved)
+        return out({kind: 'draw'}, st.prev ? Object.assign({}, st.prev) : Object.assign(plainState(st), {status: 'ok', score: 0}));
+      return own('remove');
+    }
+    // S01 / S10 / S10*: a label of the user's on that session (during it, a popover button, a loaded one): unmark.
+    // #67 review: Meddeb's verdict as the stopped session settled it (never "being confirmed" on a finished session)
+    if (o.saving) return {from, to: from, act: null, toast: 'Saving the session: double tap again in a moment'};
+    if (o.unsaved) return out({kind: 'draw'}, settledState(st.auto, thr));
+    return out({kind: 'event', event: 'unmark'}, settledState(st.auto, thr), historyAfterMark(h, 'unmark', o.when));
+  }
+
+  /** #67 review: a word state as ■ settles it (Tracker._freeze, recite/app.py _settled): being confirmed (taupe,
+   *  provisional) wrong / skipped at or above the threshold is that mistake, any other provisional verdict correct
+   *  (score 0), as the history stores it; any other state as it is. A new object. */
+  function settledState(st, thr) {
+    const o = Object.assign({}, st), s = String(o.status || '');
+    if (!s.startsWith('provisional')) return o;
+    if ((s === 'provisional_wrong' || s === 'provisional_missing') && +o.score >= thr) o.status = s.slice('provisional_'.length);
+    else { o.status = 'ok'; o.score = 0; }
+    return o;
   }
 
   /** A history line's time, as the engine writes it ('yyyy-mm-dd hh:mm', local time). */
@@ -177,7 +402,8 @@
     const u = o.url;
     if (u && +u.ayah > 0 && +u.surah === +o.surah && !o.hasSession) from = Math.max(+u.ayah, from);
     const s = o.startAt;
-    if (s && (s.search || s.review) && +s.surah === +o.surah && +s.page === +o.page) from = +s.ayah;
+    // #73 (v0.19, D3): also the silent session ◂ / ⏮ start in Blind (s.silent), at the ayah of the word they reveal
+    if (s && (s.search || s.review || s.silent) && +s.surah === +o.surah && +s.page === +o.page) from = +s.ayah;
     return from;
   }
 
@@ -288,15 +514,15 @@
   /** #42 (user, 2026-10-25: "replace the date by the nb of days ago it was recited from: today, 1, 2, ... 99, +99 …
    *  no row is gonna consume two lines for no needed reason"): the Progress table's Days ago cell, from a page's
    *  last_revised 'yyyy-mm-dd' and today's date on the device's clock (same form; a time after it is ignored): 'today',
-   *  '1' … '99', '+99'; a date after today (a clock set back) reads 'today'. words (the Manzil check line): 'today',
-   *  '1 day ago', '12 days ago', '+99 days ago'. Calendar days (UTC arithmetic: no DST shift); '' when either date is
-   *  unreadable. */
+   *  '1' … '99', '99+' ([v0.20, #91] user: "the pace in the app +30 to 30+"; was +99 before); a date after today (a clock
+   *  set back) reads 'today'. words (the Manzil check line): 'today', '1 day ago', '12 days ago', '99+ days ago'.
+   *  Calendar days (UTC arithmetic: no DST shift); '' when either date is unreadable. */
   function daysAgoText(iso, today, words) {
     const day = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
     const n = Math.round((day(today) - day(iso)) / 86400000);
     if (!Number.isFinite(n)) return '';
     if (n <= 0) return 'today';
-    const t = n > 99 ? '+99' : String(n);
+    const t = n > 99 ? '99+' : String(n);
     return words ? `${t} day${n === 1 ? '' : 's'} ago` : t;
   }
 
@@ -306,8 +532,16 @@
   /** The popover's verdict badge: {cls, text, below (under the threshold: treated as correct)}. */
   function statusLabel(st, threshold) {
     const s = st.status || 'pending';
-    if (manualMistake(st)) return {cls: 'wrong', text: 'manual labeled mistake', below: false};
+    // #72 (v0.19, X2.12b): an insertion before the word (Meddeb's, or the user's own)
+    if (manualMistake(st)) return {cls: 'wrong', text: st.ins ? 'manual labeled insertion' : 'manual labeled mistake', below: false};
+    if (st.ins && s === 'wrong') return {cls: 'wrong', text: 'extra word before this word', below: !isMistake(st, threshold)};
     if (!MISTAKE.has(s) && s !== 'ok' && !s.startsWith('provisional')) return {cls: 'pending', text: 'not recited yet', below: false};
+    if (s === 'ok' && st.user && st.auto) {
+      // #67: "AI detected mistake and you keep the nature of it (skip or ...), but manually labeled ok" (S10, S10*)
+      const a = st.auto;
+      if (a.hinted && !st.hinted) return {cls: 'ok', text: 'correct (you) · hint removed', below: false};
+      if (bad(a, threshold)) return {cls: 'ok', text: 'correct (you) · Meddeb: ' + aiNature(a), below: false};
+    }
     if (s === 'ok') return {cls: 'ok', text: 'correct', below: false};
     if (s === 'hinted') return {cls: 'hinted', text: 'revealed by a hint (counted)', below: false};
     if (s.startsWith('provisional')) return {cls: 'prov', text: 'being confirmed', below: false};
@@ -319,7 +553,8 @@
   /** The summary's verdict word (as recite/app.py verdict_label). */
   function summaryVerdict(st) {
     if (!st) return '?';
-    if (manualMistake(st)) return 'manual labeled mistake';
+    if (manualMistake(st)) return st.ins ? 'manual labeled insertion' : 'manual labeled mistake';
+    if (st.ins && st.status === 'wrong') return 'extra word before';   // #72 (v0.19, as verdict_label)
     if (st.lost) return 'lost';
     return {wrong: 'wrong', missing: 'skipped', hinted: 'hint'}[st.status] || st.status;
   }
@@ -335,8 +570,94 @@
   function readingText(r) {
     const bad = r.outcome === 'mistake';
     const manual = r.source === 'mark' || (!!r.now && !!r.user);
+    // #72 (v0.19, X2.12b): an insertion before the word: "extra word before" (what was heard: the extra words)
+    if (bad && r.ins) return manual ? {label: 'manual labeled insertion', bad: true, you: false, heard: null, ins: true}
+      : {label: 'extra word before', bad: true, you: false, heard: r.heard || null, ins: true};
     if (bad && manual) return {label: 'manual labeled mistake', bad: true, you: false, heard: null};
     return {label: bad ? 'mistake' : 'ok', bad, you: manual, heard: bad && r.heard ? r.heard : null};
+  }
+
+  /** #72 (v0.19, U1.4): the ⚡ popover's history: the insertions at this place among the word's readings (h: the
+   *  summary), newest first {when, heard (the extra words; null: the user's own), you}, and how many of the readings. */
+  function insLines(h) {
+    const rs = (h && h.readings) || [];
+    const items = rs.filter(r => r.outcome === 'mistake' && r.ins).reverse()
+      .map(r => ({when: r.when, heard: r.source === 'mark' ? null : r.heard || null, you: r.source === 'mark'}));
+    return {items, text: items.length ? `${items.length} of the last ${rs.length} reading${rs.length === 1 ? '' : 's'}`
+      : 'no insertion here in the last readings'};
+  }
+
+  /** #72 (v0.19, U1.2, D6): how an insertion is drawn. st = the word's state in the session on screen, h = its history
+   *  summary, ctx = {threshold, showHist}. A verdict on screen: an insertion (ins, a mistake at the threshold) = a red
+   *  ⚡ in the gap before the word ('red') and the word not red (it was said right); any other mistake = the red word.
+   *  No verdict on screen: a newest reading that is an insertion = a faded ⚡ ('hist') with the history layer on. */
+  function insView(st, h, ctx) {
+    ctx = ctx || {};
+    const s = st || {};
+    if (s.status && s.status !== 'pending') {
+      const red = isMistake(s, ctx.threshold), ins = red && !!s.ins;
+      return {bolt: ins ? 'red' : null, wordRed: red && !ins};
+    }
+    const r = h && h.readings, last = r && r.length ? r[r.length - 1] : null;
+    return {bolt: ctx.showHist && last && last.outcome === 'mistake' && last.ins ? 'hist' : null, wordRed: false};
+  }
+
+  /** #72 (v0.19, X2.12b): the gap a tap at (x, y) falls in -> the page index of the word after it, or null. rows = the
+   *  drawn words in reading order, per line or all in one list (Own size), each {k, kl (its first and last page index:
+   *  a written word of two spoken words, U1.1e), left, right, top, bottom} (ayah markers {marker: true} are skipped:
+   *  they lie in the gap they belong to); the rectangles as drawn at the tap. Words are grouped into lines by their
+   *  top; the tap's line is the nearest, null when it is more than half a line away. Right to left: word k-1 is right
+   *  of word k. Right of a line's first word = the gap before it (its word before is the previous line's last; the
+   *  page's first word: no check); left of a line's last word = the gap before the next line's first word (none: null).
+   *  Inside a word, or between words that are not consecutive (Blind: an unrevealed word between): null. */
+  function gapAt(x, y, rows) {
+    const words = [].concat(...(rows || []).map(r => (Array.isArray(r) ? r : [r]))).filter(w => w && !w.marker);
+    const lines = [];
+    for (const w of words) {
+      const cur = lines[lines.length - 1], mid = (w.top + w.bottom) / 2;
+      if (cur && mid >= cur.top && mid <= cur.bottom) {
+        cur.words.push(w); cur.top = Math.min(cur.top, w.top); cur.bottom = Math.max(cur.bottom, w.bottom);
+      } else lines.push({words: [w], top: w.top, bottom: w.bottom});
+    }
+    let li = -1, best = Infinity;
+    lines.forEach((ln, j) => {
+      const d = y < ln.top ? ln.top - y : y > ln.bottom ? y - ln.bottom : 0;
+      if (d < best) { best = d; li = j; }
+    });
+    if (li < 0 || best > (lines[li].bottom - lines[li].top) / 2) return null;
+    const ws = lines[li].words;
+    if (ws.some(w => x >= w.left && x <= w.right)) return null;
+    // review of #72: a margin is a gap only next to the word (half a line: a centred line's empty half is none)
+    const edge = (lines[li].bottom - lines[li].top) / 2;
+    let before, after;
+    if (x > ws[0].right) {
+      if (x - ws[0].right > edge) return null;
+      after = ws[0];
+      const prev = lines[li - 1];
+      before = prev ? prev.words[prev.words.length - 1] : null;
+      if (!before) return after.k === 0 ? 0 : null;
+    } else if (x < ws[ws.length - 1].left) {
+      if (ws[ws.length - 1].left - x > edge) return null;
+      before = ws[ws.length - 1];
+      const next = lines[li + 1];
+      after = next ? next.words[0] : null;
+      // never across a surah's header and basmala into the next surah (rows say their surah: s)
+      if (after && before.s != null && after.s != null && before.s !== after.s) return null;
+    } else {
+      const j = ws.findIndex((w, n) => n + 1 < ws.length && x < w.left && x > ws[n + 1].right);
+      if (j < 0) return null;
+      before = ws[j]; after = ws[j + 1];
+    }
+    return after && before.kl + 1 === after.k ? after.k : null;
+  }
+
+  /** Review of #72 (U1.2): the drawn word whose own box holds a tap at (x, y) -> its page index (k), or null. rows as
+   *  gapAt's. The ⚡'s tap pad lies over the gap and may reach into the words beside it (a justified gap of a few
+   *  pixels): a tap there is that word's (its popover, #67's double tap), never the ⚡'s. */
+  function wordAt(x, y, rows) {
+    const words = [].concat(...(rows || []).map(r => (Array.isArray(r) ? r : [r]))).filter(w => w && !w.marker);
+    const w = words.find(r => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
+    return w ? w.k : null;
   }
 
   // ---------------------------------------------------------------- X2.12 (b) the page follows new recitation only
@@ -379,18 +700,35 @@
 
   // ---------------------------------------------------------------- U1.13 Listen
   // #31 (user, 2026-10-24): vary = Vary start and end (off: "the user checks this option"), gap_s = the pause between
-  // plays (3 s, 0-30)
+  // plays (#89, user 2026-10-31: 6 s, was 3; 0-30); v = the form's version (20: the pause default is 6, migrateListenForm);
+  // reciter (#93, user 2026-10-31: "add a combo box in listen to change the reader, yasser dussary as default"): an id of
+  // RECITER_IDS, the ids of recite/listen.py RECITERS in their order (test_ui_logic.py checks they are the same)
+  const RECITER_IDS = ['yasser_ad-dussary', 'yaser_salamah', 'alafasy', 'fares_abbad'];
   const LISTEN_DEFAULT = {tab: 'page', surah: 1, ayah_from: 1, ayah_to: 7, page_from: 1, page_to: 1, repeat: 17, vary: false,
-    gap_s: 3};
+    gap_s: 6, v: 20, reciter: RECITER_IDS[0]};
+  const OLD_GAP_S = 3;   // #89: the pause default before v0.20
   const GAP_MAX_S = 30;
   const N_PAGES = 604;
 
   function int(v, dflt) { const n = parseInt(v, 10); return Number.isFinite(n) ? n : dflt; }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  /** #93: a known reciter id, else the default (Yasser Al-Dossary), as the engine's listen.reciter does. */
+  function knownReciter(id) { return RECITER_IDS.includes(id) ? id : RECITER_IDS[0]; }
+
+  /** #93: the Reciter select's options [{id, label}] from listen_reciters ([{id, label, name}], B3.14): the ids this page
+   *  knows, in the engine's order (a label missing: the id); none (an engine without the call, a broken answer): Yasser
+   *  alone. */
+  function reciterOptions(list) {
+    const out = (Array.isArray(list) ? list : []).filter(r => r && RECITER_IDS.includes(r.id))
+      .map(r => ({id: r.id, label: String(r.label || r.id)}));
+    return out.length ? out : [{id: RECITER_IDS[0], label: 'Yasser Al-Dossary 🕋'}];
+  }
 
   /** The Listen form (saved as settings.listen), clamped: surah 1-114, ayat 1..verses of the surah, pages 1-604, a
    *  reversed range swapped, repeat >= 0 (extra plays of the whole range), vary (#31: true only when ticked) and gap_s
-   *  (#31: whole seconds 0-30, 3 when unreadable). chapters = [{id, verses_count}] or null.
+   *  (#31: whole seconds 0-30, 6 when unreadable), v (#89: always LISTEN_DEFAULT.v, so a save marks the form), reciter
+   *  (#93: a known id, else Yasser's).
+   *  chapters = [{id, verses_count}] or null.
    *  keepOrder: clamp only (the inputs while they are typed: "from 100" with 12..15 still shown must not become
    *  15..100 before "to 110" is typed; the saved form and the plan are swapped). */
   function clampListenForm(form, chapters, keepOrder) {
@@ -405,9 +743,23 @@
     let p = clamp(int(f.page_from, 1), 1, N_PAGES), q = clamp(int(f.page_to, p), 1, N_PAGES);
     if (p > q && !keepOrder) [p, q] = [q, p];
     out.page_from = p; out.page_to = q;
-    out.repeat = clamp(int(f.repeat, LISTEN_DEFAULT.repeat), 0, 999);
+    // #54: a box the user emptied means 0 (one play); a form without the field keeps the default
+    const emptied = typeof f.repeat === 'string' && !f.repeat.trim();
+    out.repeat = emptied ? 0 : clamp(int(f.repeat, LISTEN_DEFAULT.repeat), 0, 999);
     out.vary = f.vary === true;
     out.gap_s = clamp(int(f.gap_s, LISTEN_DEFAULT.gap_s), 0, GAP_MAX_S);
+    out.v = LISTEN_DEFAULT.v;
+    out.reciter = knownReciter(f.reciter);
+    return out;
+  }
+
+  /** #89 (user, 2026-10-31: "make default pause value to 6 seconds"): a `listen` saved before v0.20 (no marker v) with
+   *  the old default pause 3 gets 6, once: the page saves it back with v (clampListenForm), so a 3 chosen afterwards
+   *  stays 3 and Kotlin (the car, the shortcuts) reads 6 too. Anything else comes back as it was (a new object). */
+  function migrateListenForm(saved) {
+    if (!saved || typeof saved !== 'object') return saved == null ? null : saved;
+    const out = Object.assign({}, saved);
+    if (out.v == null && int(out.gap_s, null) === OLD_GAP_S) out.gap_s = LISTEN_DEFAULT.gap_s;
     return out;
   }
 
@@ -471,13 +823,77 @@
     return out;
   }
 
-  /** #31: the volume while a pass fades out: from 1 down to 0 over the span (1.8 s) that ends at the cut. */
-  function fadeVolume(posMs, endMs, spanMs) { return clamp((endMs - posMs) / (spanMs || 1800), 0, 1); }
+  /** #31: the volume while a pass fades out: from 1 down to 0 over the span that ends at the cut (#89: 3 s, was 1.8 s;
+   *  at most the cut itself, so a cut under 3 s into the file fades from its start and never starts quiet). */
+  const FADE_MS = 3000;
+  function fadeVolume(posMs, endMs, spanMs) {
+    const span = Math.min(spanMs || FADE_MS, endMs);
+    return span > 0 ? clamp((endMs - posMs) / span, 0, 1) : 0;
+  }
 
-  /** The `listen_plan` parameters of the form's current tab (B3.14). */
+  // ---- #88 how long a listening lasts
+  /** #88 (user, 2026-10-31: "always show the time length of the chosen segment … count the silence, verse randomness
+   *  (even by estimation)"): {segS (one play of the plan's clips), totalS, plays} for the form's Repeat, pause and Vary,
+   *  from the clips' `ms` (listen_plan); null when a length it needs is missing. Between two plays: the pause (0.25 s
+   *  with Vary and a pause of 0, as the players do) and, with Vary, the average extra of a play (passShape draws
+   *  before and after uniformly): before = the mean over k = 0..maxBefore of the margin_before clips with step <= k;
+   *  after = the mean over k = 0..maxAfter of the steps < k plus half of step k (the fade-out's place, on average). */
+  function listenEstimate(plan, form) {
+    const ms = (cs) => { let t = 0; for (const c of cs) { if (!c || c.ms == null || !Number.isFinite(+c.ms)) return null; t += +c.ms; } return t; };
+    const clips = plan && plan.clips;
+    if (!clips || !clips.length) return null;
+    const seg = ms(clips);
+    if (seg == null) return null;
+    const f = clampListenForm(form);
+    const plays = f.repeat + 1;
+    let between = f.gap_s || (f.vary ? 0.25 : 0);
+    if (f.vary && plays > 1) {
+      const mb = plan.margin_before || [], ma = plan.margin_after || [];
+      const nb = marginSteps(mb), na = marginSteps(ma);
+      let before = 0, after = 0;
+      for (let k = 0; k <= nb; k++) {
+        const t = ms(mb.filter(c => +c.step <= k)); if (t == null) return null; before += t;
+      }
+      for (let k = 0; k <= na; k++) {
+        const t = ms(ma.filter(c => +c.step < k)), h = ms(ma.filter(c => +c.step === k));
+        if (t == null || h == null) return null;
+        after += t + h / 2;
+      }
+      between += (before / (nb + 1) + after / (na + 1)) / 1000;
+    }
+    const segS = seg / 1000;
+    return {segS, totalS: plays * segS + (plays - 1) * between, plays};
+  }
+
+  /** #88: "keep the numbers well rounded": rounded first, then the unit picked: under 10 s whole seconds, under a
+   *  minute the nearest 5 s ("55 seconds"), under an hour whole minutes, at least 1 ("5 min"), under 10 h one decimal
+   *  ("1 hour", "1.1 hours"), else whole hours. */
+  function formatDuration(s) {
+    const x = Math.max(0, +s || 0);
+    const r = Math.round(x);
+    if (r < 10) return `${r} second${r === 1 ? '' : 's'}`;
+    const r5 = Math.round(x / 5) * 5;
+    if (r5 < 60) return `${r5} seconds`;
+    const m = Math.max(1, Math.round(x / 60));
+    if (m < 60) return `${m} min`;
+    const h1 = Math.round(x / 360) / 10;
+    if (h1 < 10) return h1 === 1 ? '1 hour' : `${h1} hours`;
+    return `${Math.round(x / 3600)} hours`;
+  }
+
+  /** #88: the caption's end: "≈ 55 seconds (total: 17 min with 18 plays)", "≈ 1.1 hours, no repetition"; '' without
+   *  an estimate. */
+  function listenDurationText(est) {
+    if (!est) return '';
+    return est.plays > 1 ? `≈ ${formatDuration(est.segS)} (total: ${formatDuration(est.totalS)} with ${est.plays} plays)`
+      : `≈ ${formatDuration(est.segS)}, no repetition`;
+  }
+
+  /** The `listen_plan` parameters of the form's current tab (B3.14), #93 with its reciter (a known id, else Yasser's). */
   function listenParams(form) {
-    return form.tab === 'ayah' ? {tab: 'ayah', surah: form.surah, ayah_from: form.ayah_from, ayah_to: form.ayah_to}
-      : {tab: 'page', page_from: form.page_from, page_to: form.page_to};
+    const reciter = knownReciter(form.reciter);
+    return form.tab === 'ayah' ? {tab: 'ayah', surah: form.surah, ayah_from: form.ayah_from, ayah_to: form.ayah_to, reciter}
+      : {tab: 'page', page_from: form.page_from, page_to: form.page_to, reciter};
   }
 
   /** "= 18 plays" next to the repeat count (the range plays once, then `repeat` more times). */
@@ -543,7 +959,9 @@
    *  downloads the model, D1 (v0.9): never a second download) or 'fail' with `why` (`download`: the download failed).
    *  D2 (v0.9, user 2026-10-11): installed === false comes before any error: a fresh phone's `ready` also carried "the
    *  speech model is not downloaded yet" as an error, tested first, so the press failed (in red, for ever) instead of
-   *  downloading. */
+   *  downloading. #78 (v0.20, D5) review: done.retry (Android, engine.holdsAudio) and the model installed: an error
+   *  before this press loaded (a failed load, a held start discarded) is loaded once more (Kotlin's `load` loads again
+   *  from "error: ..."); its error then fails. The PC and the web fail at once as before. */
   function modelStep(r, done) {
     r = r || {}; done = done || {};
     if (r.ready) return {step: 'done'};
@@ -552,6 +970,7 @@
       if (!done.downloaded && !done.waited && !done.loads) return {step: 'download'};
       return {step: 'fail', download: true, why: String(r.error || 'the download did not finish')};
     }
+    if (r.error && done.retry === true && r.installed === true && !done.loads) return {step: 'load'};
     if (r.error) return {step: 'fail', why: String(r.error)};
     if (r.loading || done.justLoaded) return {step: 'poll'};
     if ((done.loads || 0) >= MODEL_LOADS) return {step: 'fail', why: 'the model did not load'};
@@ -587,13 +1006,23 @@
   // ---------------------------------------------------------------- the toast (D2, v0.9)
   const TOAST_MS = 4000, ERROR_TOAST_MS = 10000;
 
+  const READ_BASE_MS = 2000, READ_CHAR_MS = 80, READ_MAX_MS = 20000;
+
+  /** #64 (user, 2026-10-29: "i don't even have time to read them"): the time to read a toast, 2 s + 80 ms a character
+   *  (12.5 characters a second), at most 20 s. */
+  function readingMs(text) {
+    return Math.min(READ_MAX_MS, READ_BASE_MS + READ_CHAR_MS * String(text == null ? '' : text).length);
+  }
+
   /** How long a toast stays (ms): what the caller asks (Infinity: until another message, e.g. the text size while
    *  pinching), else 4 s; an error 10 s unless a duration is given, and never for ever (user, 2026-10-11: "the red
-   *  message should disappear after a while"; v0.8 kept errors until the next message or Esc). */
-  function toastMs(error, ms) {
-    const n = ms == null ? NaN : +ms;
-    if (error) return Number.isFinite(n) && n > 0 ? n : ERROR_TOAST_MS;
-    return ms == null || Number.isNaN(n) ? TOAST_MS : n;
+   *  message should disappear after a while"; v0.8 kept errors until the next message or Esc). #64: never less than
+   *  the text's reading time (readingMs), a caller's shorter duration included. */
+  function toastMs(error, ms, text) {
+    const n = ms == null ? NaN : +ms, read = readingMs(text);
+    if (error) return Math.max(Number.isFinite(n) && n > 0 ? n : ERROR_TOAST_MS, read);
+    const asked = ms == null || Number.isNaN(n) ? TOAST_MS : n;
+    return asked === Infinity ? asked : Math.max(asked, TOAST_MS, read);
   }
 
   /** After the model loaded (seconds on a PC, minutes for a phone's download), whether the press that asked for it
@@ -605,6 +1034,18 @@
     s = s || {};
     if (s.running || s.starting || s.searching) return 'busy';
     return s.view === 'recite' && !s.played && !s.hidden ? 'start' : 'left';
+  }
+
+  /** #78 (v0.20, D5; user, 2026-10-30: "why don't you just start recording on clic and when the model loading is done
+   *  you forward the recording fifo until reaching the live audio"): what a microphone or search press does, from the
+   *  engine's `ready` answer r ({ready, installed, downloading, error}) and `holds` (engine.holdsAudio: Android keeps
+   *  the audio while the model loads): 'now' (ready), 'hold' (the session and the microphone open at once while an
+   *  installed model loads: holds, installed, not downloading, no load error) or 'wait' (the model first, as before:
+   *  the PC, the web, a model missing or downloading, a load that failed). */
+  function startPlan(r) {
+    r = r || {};
+    if (r.ready) return 'now';
+    return r.holds === true && r.installed === true && !r.downloading && !r.error ? 'hold' : 'wait';
   }
 
   // ---------------------------------------------------------------- X2.2 text modes: what is visible, Shown resets
@@ -676,6 +1117,13 @@
     return !o.hasNext || !!o.nextSeen || !!o.closed;
   }
 
+  /** #86 (v0.20, D12; user 2026-10-31: "in the blid mode, the eya number is actually a big of a hint … empty accolade
+   *  "{  }" only the hidden mode and the show mode will print the number"): an ayah marker's text, '﴿n﴾'; in Blind
+   *  '﴿' + two no-break spaces + '﴾'. The car's picture keeps its number (CarText.kt: it shows only after the ayah). */
+  function ayahMarkerText(n, mode) {
+    return mode === 'blind' ? '﴿  ﴾' : '﴿' + n + '﴾';
+  }
+
   /** U1.2b (D4, 2026-10-10): this session's reading of a word for the history glow: the user's mark, or a final
    *  verdict ('mistake' at or above the threshold, else 'ok'); a provisional verdict is no reading (it was the orange
    *  glow of #4). null outside a session, and once it is saved (the server's readings hold it: no double count).
@@ -691,22 +1139,79 @@
   /** B3.8: a session word (state / session_load) as the page keeps it (D2, 2026-10-10: `said` included). */
   function wordState(w) {
     w = w || {};
-    return {status: w.status || 'pending', score: w.score == null ? 0 : w.score, hyp: w.hyp == null ? null : w.hyp,
+    const st = {status: w.status || 'pending', score: w.score == null ? 0 : w.score, hyp: w.hyp == null ? null : w.hyp,
       hinted: !!w.hinted, lost: !!w.lost, concealed: !!w.concealed, said: !!w.said, user: !!w.user,
       t0: w.t0 == null ? null : w.t0, t1: w.t1 == null ? null : w.t1};
+    // #72 (v0.19, X2.12b): an insertion before the word, w0 = its own start (t0..w0: the extra words)
+    if (w.ins) { st.ins = true; st.w0 = w.w0 == null ? null : w.w0; }
+    // #67: a loaded session's label of the user's carries the tracker's own state under it (session_load's auto): a
+    // whole word state (the replay times kept), drawn as it is when a double tap gives it back (#72: with its own ins)
+    if (w.auto) st.auto = wordState(Object.assign({}, w, {ins: false}, w.auto, {user: false, auto: null}));
+    return st;
   }
 
   /** D1 (#1, 2026-10-10): what ◂ / ⏮ send during a session. ◂ reveals the earliest bar of the page shown first (hint{i},
    *  barGi = its session index; v0.7 revealed the word after the cursor and left the red bar), else the word after the
    *  reciter (hint without i, X2.4b); ⏮ is unchanged (the rest of the ayah, skip_to without i). */
-  function sessionRevealMsg(kind, barGi) {
-    if (kind !== 'word') return {type: 'skip_to'};
-    return barGi != null && barGi >= 0 ? {type: 'hint', i: +barGi} : {type: 'hint'};
+  function sessionRevealMsg(kind, barGi, silent) {
+    // #49 (v0.17): silent = a Review card with the microphone off: the words are read in the mind (B3.8 {silent})
+    const m = kind !== 'word' ? {type: 'skip_to'} : barGi != null && barGi >= 0 ? {type: 'hint', i: +barGi} : {type: 'hint'};
+    if (silent) m.silent = true;
+    return m;
+  }
+
+  /** #73 (v0.19, D2; user 2026-10-29: "when the session is paused or stopped and you clic next it counts as ok, until
+   *  he double clic to flip it … but not the hidden mode"): are ◂ / ⏮ during a session a silent reading (#49:
+   *  hint{silent} / skip_to{silent})? Only while the user paused it (not the page's own pause around a clip or a
+   *  replay: autoPaused), never on the car's session the page follows (car), never in Hidden (the mode wins, a card
+   *  too); then in Blind, a live Review card (#49) or a card left with ✕ (cardSilent, #57).
+   *  o = {paused, autoPaused, car, card, cardSilent, mode}. */
+  function silentReveal(o) {
+    o = o || {};
+    if (!o.paused || o.autoPaused || o.car || o.mode === 'hide') return false;
+    return !!o.card || !!o.cardSilent || o.mode === 'blind';
+  }
+
+  /** #73 (v0.19, D3): ◂ / ⏮ with no session running on the page. Blind: 'silent_start' (a silent session starts at the
+   *  word they reveal, start{mic_off, at}), 'wait' while a start is under way (its one pending reveal is queued: the
+   *  press does nothing); a search, a Review card on screen (its strip decides), Hidden and Shown: 'show' (X2.3: only
+   *  shown). #73 review: a start stops Listen and, on Android, ends the engine's session: 'show' while Listen plays,
+   *  loads or is paused (listening) or the car's Recite owns the engine (car: its recitation or its Find where I am, the
+   *  page following nothing); 'wait' too while a press's start waits for the model download or load (modelBusy: a
+   *  start then cancels that wait or is dropped). Review of 0.19: 'wait' also while ■ still saves the session on screen
+   *  (stopping: a new session opened over it, and on the web its `done` closed the new one). o = {mode, running,
+   *  starting, searching, review, listening, car, modelBusy, stopping}. */
+  function revealOutside(o) {
+    o = o || {};
+    if (o.mode !== 'blind' || o.running || o.searching || o.review || o.listening || o.car) return 'show';
+    return o.starting || o.modelBusy || o.stopping ? 'wait' : 'silent_start';
+  }
+
+  /** #84 (v0.20, D10; user 2026-10-31: "if it is in mic on, then keep this color. if it is in mic off then use a green
+   *  color pale"): do ◂ / ⏮ count a press as read (pale green) rather than as a hint, a mistake (tan)? Read with no
+   *  session running on the page (no session yet, a start not answered yet: X2.3 shows, Blind's silent start reads) or
+   *  when a press is a silent reveal (silentReveal: Blind paused by the user, a card's microphone off); a hint while the
+   *  microphone listens, the page's own pause for a clip, the car's session, a paused Shown / Hidden session (the user's
+   *  stated aim: what the press counts as). o = reveal()'s inputs: {running, session, paused, autoPaused, car, card,
+   *  cardSilent, mode}. */
+  function hintsRead(o) {
+    o = o || {};
+    return !(o.running && o.session) || silentReveal(o);
+  }
+
+  /** #73 (v0.19, D4): the B3.8 mode{mode} a text-mode change sends while a session the page owns is open (started, not
+   *  being stopped, not a search, not the car's session it follows: the phone's mode never makes the car's practice);
+   *  null otherwise. o = {running, session, stopping, car, searching}. */
+  function modeMsg(m, o) {
+    o = o || {};
+    if (!o.running || !o.session || o.stopping || o.car || o.searching) return null;
+    return {type: 'mode', mode: m};
   }
 
   /** D3 (#3, user 2026-10-10): the bar's unsettled-speech gauge (U1.2c) and ⚠ from a state. Paused reads as finished
    *  (the state of ❚❚ carries paused, and the page knows it paused): an empty gauge, no ⚠; the next state after the
-   *  resume sets them again. */
+   *  resume sets them again. #70 (v0.19, D1): the page passes `paused || !running`, so the final decode's state that
+   *  comes after ■ reads as finished too. */
   function barSignals(m, paused) {
     m = m || {};
     if (paused || m.paused) return {speech: 0, latency: 0, warn: false};
@@ -792,17 +1297,77 @@
   }
 
   const REVIEW_TAGS = {new: 'new', red: 'to fix', green: 'to confirm', stubborn: 'stubborn'};
-  /** A row of the Review list (a review_queue card, names = {surah id: English name}): {title (the surah · the page),
-   *  detail (its mistakes in the last 5 readings · the engine's why), tag (the card's state), tagText}. Never the
-   *  target's ayat: the card test is hidden (user, #39: the user starts e.g. at ayah 8 for an error at 10). */
-  function reviewCardView(card, names) {
+  /** #46 (user, 2026-10-26: "also show the span of the card for example Al Bakarah 12, Al Bakarah 12-13"): a card's
+   *  surah and target ayat, 'Al-Baqarah 12' / 'Al-Baqarah 12-13' (names = {surah id: English name}); the surah alone
+   *  without a target. */
+  function reviewSpanText(card, names) {
     const c = card || {};
     const name = (names && names[c.surah]) || `Surah ${c.surah}`;
+    const t = Array.isArray(c.target) ? c.target.map(Number) : [];
+    if (!(t[0] > 0)) return name;
+    return t[1] > t[0] ? `${name} ${t[0]}-${t[1]}` : `${name} ${t[0]}`;
+  }
+
+  /** A row of the Review list (a review_queue card): {title (the span · the page), span, detail (its mistakes in the
+   *  last 5 readings · the engine's why), tag (the card's state), tagText}. #46: the span is named (the hidden test of
+   *  #39 is dropped). */
+  function reviewCardView(card, names) {
+    const c = card || {};
+    const span = reviewSpanText(c, names);
     const n = Math.max(0, Math.round(+c.errors) || 0);
     const tag = REVIEW_TAGS[c.state] ? c.state : 'new';
-    return {title: c.page ? `${name} · page ${c.page}` : name,
+    return {title: c.page ? `${span} · page ${c.page}` : span, span,
       detail: [`${n} mistake${n === 1 ? '' : 's'}`, c.why ? String(c.why) : ''].filter(Boolean).join(' · '),
       tag, tagText: REVIEW_TAGS[tag]};
+  }
+
+  /** #46 (user, 2026-10-26: "the review page did not change while I have quite some new errors done today"): the line
+   *  under the counters from review_queue's today_mistakes {words, cards, one_more, not_learned, next_to_learn} and
+   *  counters.waiting; '' when there is nothing to say. */
+  function reviewTodayText(q) {
+    const t = (q && q.today_mistakes) || {}, c = (q && q.counters) || {};
+    const n = (v) => Math.max(0, Math.round(+v) || 0);
+    const parts = [];
+    if (n(t.words)) {
+      parts.push(`Today: ${n(t.words)} word${n(t.words) === 1 ? '' : 's'} missed`);
+      if (n(t.cards)) parts.push(`${n(t.cards)} in cards`);
+      if (n(t.one_more)) parts.push(`${n(t.one_more)} need${n(t.one_more) === 1 ? 's' : ''} one more mistake to become a card`);
+      if (n(t.not_learned)) parts.push(`${n(t.not_learned)} in ayat not learned yet`);
+      if (n(t.next_to_learn)) parts.push(`${n(t.next_to_learn)} on the page you are learning`);
+    }
+    if (n(c.waiting)) parts.push(`${n(c.waiting)} more card${n(c.waiting) === 1 ? ' waits' : 's wait'} for the next days (10 a day, 3 of them new)`);
+    return parts.join(' · ');
+  }
+
+  /** #51 (user, 2026-10-27: "I clic next card. I end up in the same Quran text"): the card Next card opens, from
+   *  today's round `cards` after the card `cur` just done: the first that shares no word and no target ayah with it (a
+   *  failed card recomputed after its session has a new id at the same place); null: none left. #81 (v0.20, D8; user,
+   *  2026-10-30: "not seeing card one before at least 45min !"): never a card waiting for its retry (wait_until). */
+  function reviewNextCardOf(cards, cur) {
+    const list = (Array.isArray(cards) ? cards : []).filter(c => c && !c.wait_until);
+    if (!cur) return list[0] || null;
+    const t = (c) => (Array.isArray(c.target) ? c.target.map(Number) : []);
+    const ct = t(cur), cw = new Set(cur.words || []);
+    const overlaps = (c) => c.id === cur.id || (c.words || []).some(w => cw.has(w))
+      || (+c.surah === +cur.surah && t(c).length === 2 && ct.length === 2 && t(c)[0] <= ct[1] && ct[0] <= t(c)[1]);
+    return list.find(c => c && !overlaps(c)) || null;
+  }
+
+  /** #81 (v0.20, D8): the status when Next card finds no card ready (reviewNextCardOf null) and opens the list: the
+   *  soonest retry of today's round ("Next card at 10:35"), else that nothing else is due today. */
+  function reviewWaitText(cards) {
+    const at = (Array.isArray(cards) ? cards : []).map(c => c && c.wait_until).filter(Boolean).map(String).sort();
+    return at.length ? `Next card at ${at[0]}` : 'No other card due today.';
+  }
+
+  /** #49 (user, 2026-10-27: "I just wanted to stop the mic don't tell me my mistake"): ■ (the button, S, the voice
+   *  «stop») during a card's live session: 'pause' (the microphone off, the card stays open, nothing graded), 'none'
+   *  (already off: Next ends the card), else 'stop'. o = {live (the card's session starting or running), running,
+   *  paused}. */
+  function cardStopAction(o) {
+    o = o || {};
+    if (!o.live || !o.running) return 'stop';
+    return o.paused ? 'none' : 'pause';
   }
 
   /** The cue drawn in place on the run-up's page (review_card's cue.lines, line numbers of `page`): the keys of the
@@ -836,13 +1401,101 @@
 
   /** The card strip's Next (user, #39: "a Next button green-outlined ("skip for now") becomes filled Next once the task
    *  is done"): filled once the target's last word (lastGi) has a final verdict (or the user's) or the cursor passed
-   *  it; o = {lastGi, st (its state), cursor} -> {filled, action ('skip' | 'done': ■ and the result), label, title}. */
+   *  it; o = {lastGi, st (its state), cursor, paused (the microphone off)} -> {filled, action ('skip' | 'done': ■ and
+   *  the result), label, title}. */
   function reviewNextState(o) {
     o = o || {};
     const st = o.st || {}, gi = o.lastGi;
-    const done = gi != null && (FINAL.has(String(st.status)) || !!st.user || +o.cursor > +gi);
+    // v0.17 review (#49): a last word heard but not settled yet is done too: ■ during a card only pauses, and a pause
+    // leaves the word just said provisional (no final step): said, heard right with the cursor on it, or, the
+    // microphone off (o.paused), any provisional verdict (one still being confirmed with the microphone on: not yet)
+    const s = String(st.status), on = +o.cursor >= +gi;
+    const heard = !!st.said || (on && (s === 'provisional_ok' || (!!o.paused && s.startsWith('provisional'))));
+    const done = gi != null && (FINAL.has(String(st.status)) || !!st.user || heard || +o.cursor > +gi);
     return done ? {filled: true, action: 'done', label: 'Next', title: 'The card is done: stop and see the result'}
       : {filled: false, action: 'skip', label: 'Next', title: "Skip this card for now: it comes back at the end of today's round"};
+  }
+
+  /** #55 / #57 (user, 2026-10-28/29: "keep it in one location"; "the row of review button, from left to right, should
+   *  contain: X … restart … 'Recite until 2:65' … skip (sur fond blanc) … finish (sur fond vert) … next card … the help
+   *  button … next to the help button … a play segment button"): the card's row as 7 fixed slots, always the same and
+   *  in the same order; a slot that does not apply is greyed (on false), never removed, so nothing moves. #82 (v0.20,
+   *  D9; user, 2026-10-30/31: "from left to right: 3 dots, X, fill space, ?, play, circle arrow, skip/finish button. no
+   *  need to show anymore the target eya during the card review"): more ⋯, exit ✕, label (the space between), help ?,
+   *  play ▶, again ↻, main; no label while the card starts or runs (the result's as before). o = {phase ('starting' |
+   *  'running' | 'leaving' | 'result' | 'short'), filled (the target's last word read, aloud or in the mind: reviewNextState), result (review_result's answer, null
+   *  while it is computed), target {surah, from, to}, playing (the segment's ▶ holds the player), paused (#83: the
+   *  player paused from outside: ▶, a press resumes), why (the 'short' reason),
+   *  saving (page review 2026-10-29: ■ pressed, Finish's save under way: drawn as 'leaving', nothing invites a press)}
+   *  -> {slots: [{k, text, on, cls?, title}]}. */
+  function reviewRowView(o) {
+    o = o || {};
+    const t = o.target || {}, raw = String(o.phase || '');
+    const live0 = raw === 'starting' || raw === 'running';
+    const phase = live0 && o.saving ? 'leaving' : raw, r = phase === 'result' ? (o.result || null) : null;
+    const checking = phase === 'result' && !r;
+    let label = {text: '', title: ''};   // #82: the target is no longer named while the card runs
+    let main = {text: 'Skip', cls: 'skip', on: phase === 'running',
+      title: "Skip this card for now: the next card opens; this one comes back at the end of today's round"};
+    if (live0 && o.filled) main ={text: 'Finish', cls: 'finish', on: phase === 'running', title: 'The card is done: stop and see the result'};
+    if (phase === 'leaving') label = {text: 'Saving…', title: ''};
+    else if (checking) { label = {text: 'Checking…', title: ''}; main = {text: 'Finish', cls: 'finish', on: false, title: ''}; }
+    else if (r) {
+      const v = reviewResultView(r), target = v.ayat.filter(a => !a.runup);
+      const bad = target.filter(a => !a.ok).map(a => a.text.split(':')[1]);
+      const span = t.from === t.to ? `${t.surah}:${t.from}` : `${t.surah}:${t.from}-${t.to}`;
+      label = {text: v.passed ? `✓ ${span}` : `✗ ${t.surah}:${(bad.length ? bad : [t.to]).join(', ')}`,
+        title: [v.head, v.ayat.map(a => `${a.text} ${a.ok ? '✓' : '✗'}${a.runup ? ' (run-up)' : ''}`).join(', '), v.why, v.due]
+          .filter(Boolean).join(' · ')};
+      main = {text: 'Next card', cls: 'nextcard', on: true, title: "The next card of today's round"};
+    } else if (phase === 'short') {
+      label = {text: 'Nothing saved', title: String(o.why || 'Too short to be saved: nothing was reviewed.')};
+      main = {text: 'Next card', cls: 'skip', on: true, title: "The next card of today's round"};
+    }
+    const busy = phase === 'starting' || phase === 'leaving';
+    return {slots: [
+      {k: 'more', text: '⋯', on: phase !== 'leaving', title: 'Suspend, Bury, Review list'},
+      {k: 'exit', text: '✕', on: !busy, title: 'Leave review mode: the page stays as it is (a recitation goes on)'},
+      Object.assign({k: 'label', on: true}, label),
+      {k: 'help', text: '?', on: !!r, title: 'How to learn this place: what went wrong, the similar passages, a method'},
+      // #83 (v0.20, D17): paused from outside (the notification, a watch): ▶ again, a press resumes it
+      {k: 'play', text: o.playing && !o.paused ? '■' : '▶', on: !!r,
+        title: o.playing && o.paused ? 'Resume the segment (paused from the notification or a watch)'
+          : o.playing ? 'Stop the segment' : 'Play from the hint to the last mistake again and again (0-4 more ayat at random, with the Listen pause)'},
+      {k: 'again', text: '↻', on: phase === 'running' || !!r || phase === 'short',
+        title: 'Again from the hint: recite this card once more (as practice)'},
+      Object.assign({k: 'main'}, main)]};
+  }
+
+  /** #59 (v0.18): a session message the page adopts as the car's recitation it follows: a `started` of Android Auto's
+   *  Recite (client 'car-N'), never a Find where I am search (the car's search becomes its session, which comes next). */
+  function adoptsCarSession(m) {
+    return !!m && m.type === 'started' && !m.search && /^car-\d+$/.test(String(m.client || ''));
+  }
+
+  /** #57 ?: review_help's answer h ({words: [{text, twins…}], method: [lines], sources: [{title, url}]}, B3.16) -> the
+   *  panel's blocks [{title, items: [{text, href?}]}]: what went wrong (one line per ✗ word; a pass: none), how to learn
+   *  it, why this works (the sources as links). */
+  function reviewHelpBlocks(h) {
+    h = h && typeof h === 'object' ? h : {};
+    const words = (Array.isArray(h.words) ? h.words : []).filter(w => w && w.text).map(w => ({text: String(w.text)}));
+    const method = (Array.isArray(h.method) ? h.method : []).filter(Boolean).map(t => ({text: String(t)}));
+    const sources = (Array.isArray(h.sources) ? h.sources : []).filter(x => x && x.url)
+      .map(x => ({text: String(x.title || x.url), href: String(x.url)}));
+    return [words.length ? {title: 'What went wrong', items: words} : null,
+      method.length ? {title: 'How to learn it', items: method} : null,
+      sources.length ? {title: 'Why this works', items: sources} : null].filter(Boolean);
+  }
+
+  /** #57 ▶: the ayat the card's segment plays: from the grey cue's first ayah (cueKeys 's:a:i' in the card's surah;
+   *  else the run-up's first) to the last target ayah with a ✗ (passed: the target's last). */
+  function reviewSegment(data, result, cueKeys) {
+    const d = data || {}, s = +d.surah, t = Array.isArray(d.target) ? d.target.map(Number) : [];
+    const cue = (cueKeys || []).map(k => String(k).split(':').map(Number)).filter(([cs]) => cs === s);
+    const from = cue.length ? Math.min(...cue.map(([, a]) => a)) : +d.runup_from || t[0];
+    const bad = ((result && Array.isArray(result.ayat)) ? result.ayat : [])
+      .filter(a => a.role !== 'runup' && !a.ok && +a.surah === s).map(a => +a.ayah);
+    return {surah: s, from, to: bad.length ? Math.max(...bad) : t[t.length - 1]};
   }
 
   /** review_result r -> what the strip shows: {passed, head, ayat: [{text 's:a', ok, runup}], due ('Next review: today' |
@@ -926,6 +1579,51 @@
     ];
   }
 
+  /** #80 (D7, user 2026-10-30: "New ayat a week: 54.2 (average of the last 4 weeks) Pages recited a day: 4.8 (average of
+   *  the last 4 weeks)" … "this text change also with the change of the combo box"): Over time's two average lines
+   *  (HTML) for the Pace over choice (key): stats.pace.windows[key].ayat_per_week and .pages_per_day, named by their
+   *  days ('average of the last 7 days', 'average since 25 Sep 2026'); a window without pages_per_day (an older engine):
+   *  the 4 weeks' stats.avg; nothing without stats. */
+  function averageLines(s, key) {
+    if (!s || !s.avg || typeof s.avg !== 'object') return [];
+    const k = normalizePaceWindow(key);
+    const w = ((s.pace || {}).windows || {})[k];
+    const own = !!(w && w.pages_per_day != null);
+    const label = own ? paceWindowText(k, w.days, s.series && s.series.start) : averageWindowText(s.avg.window_days);
+    const avg = /^since /.test(label) ? `average ${label}` : `average of the ${label}`;
+    return [
+      `New ayat a week: <b>${own ? +w.ayat_per_week || 0 : s.avg.ayat_per_week}</b> <span class="lbl">(${avg})</span>`,
+      `Pages recited a day: <b>${own ? w.pages_per_day : s.avg.pages_per_day}</b> <span class="lbl">(${avg})</span>`,
+    ];
+  }
+
+  /** #69 (user, 2026-10-29: "in the stats show precision recall of the AI mistakes detection (subject to the 3 time
+   *  slots of the combo box (from begining , last 4 weeks , last 7 days)"): the block under "Pace and finish date" for
+   *  the Pace over choice (key, normalizePaceWindow), from stats.detection[key] = {tp, fp, tn, fn, precision, recall,
+   *  readings} (recite/stats.py: precision = tp / (tp + fp), recall = tp / (tp + fn), null when that is 0/0) -> {title:
+   *  'Mistake detection (<the window, as the pace says it>)', lines (HTML)}: each figure in % with its counts; #69
+   *  review: a null figure says why ("Meddeb found no mistake (N words)": none flagged among the N words it judged;
+   *  "no mistake to find": none made), and no word judged at all (readings 0: no recitation aloud in these days, or
+   *  only hints and words read in the mind) is the one line "No word read aloud in these days"; null without
+   *  detection (an older engine): no block. */
+  function detectionLines(stats, key) {
+    const s = stats || {}, k = normalizePaceWindow(key), d = s.detection && s.detection[k];
+    if (!d || typeof d !== 'object') return null;
+    const w = ((s.pace || {}).windows || {})[k] || {};
+    const title = `Mistake detection (${paceWindowText(k, w.days, s.series && s.series.start)})`;
+    const n = +d.readings || 0;
+    if (!n) return {title, lines: ['No word read aloud in these days']};
+    const pct = (v) => `<b>${Math.round(+v * 100)} %</b>`, tp = +d.tp || 0;
+    const found = tp + (+d.fp || 0), made = tp + (+d.fn || 0);
+    const precision = d.precision == null ? `Precision: Meddeb found no mistake (${n} word${n === 1 ? '' : 's'})`
+      : `Precision ${pct(d.precision)} (` + (found === 1 ? `the 1 mistake Meddeb found was ${tp ? 'real' : 'not real'})`
+        : `${tp} of the ${found} mistakes Meddeb found ${tp === 1 ? 'was' : 'were'} real)`);
+    const recall = d.recall == null ? 'Recall: no mistake to find'
+      : `Recall ${pct(d.recall)} (` + (made === 1 ? `Meddeb ${tp ? 'found' : 'missed'} your 1 mistake)`
+        : `Meddeb found ${tp} of your ${made} mistakes)`);
+    return {title, lines: [precision, recall]};
+  }
+
   /** U1.19: the chart's lines in the legend's order, and its geometry (SVG user units; the page scales it). */
   const STATS_LINES = [['learned', 'Total learned'], ['perfect', 'Perfect learning'], ['next', 'Next to learn']];
   const STATS_CHART = {w: 320, h: 160, l: 34, r: 10, t: 8, b: 20};
@@ -940,10 +1638,64 @@
     return Math.max(m, 5);
   }
 
+  /** 'yyyy-mm-dd' + n days ('' for no date). */
+  function isoPlusDays(iso, n) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+    if (!m) return '';
+    return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + (n || 0))).toISOString().slice(0, 10);
+  }
+
+  /** #60 (user, 2026-10-28: "when changing the value in the combo box, the x axis of the plot changes to the last 4
+   *  weeks, 1 week, begining"): stats.series cut to the last windowDays days, from the value at the end of the day
+   *  before them (a weekly series: its last point at or before that day), its days from 0 and its start moved; a
+   *  window that reaches the first day (or none) leaves the series as it is. */
+  function statsSeriesSince(series, windowDays) {
+    const days = series && Array.isArray(series.days) ? series.days : [];
+    const w = Math.floor(+windowDays || 0);
+    if (!series || !series.start || days.length < 2 || !(w > 0)) return series;
+    const from = days[days.length - 1] - w;
+    if (from <= 0) return series;
+    let i0 = 0;
+    days.forEach((d, i) => { if (d <= from) i0 = i; });
+    const shift = days[i0], out = Object.assign({}, series, {start: isoPlusDays(series.start, shift),
+      days: days.slice(i0).map(d => d - shift)});
+    for (const [k] of STATS_LINES) if (Array.isArray(series[k])) out[k] = series[k].slice(i0);
+    return out;
+  }
+
+  /** #60: the chart's series for Stats' "Pace over" choice (pace.windows[key].days), the whole series when the window
+   *  is unknown. #80 (D7): the select is always shown, so the chart follows it also once the whole Qur'an is learned. */
+  function statsWindowSeries(stats, key) {
+    const s = stats || {}, pace = s.pace || {};
+    const win = (pace.windows || {})[normalizePaceWindow(key)];
+    return statsSeriesSince(s.series, win && win.days);
+  }
+
+  /** #60: the legend's slopes over the chosen window (stats.py: pace.windows[key].slope), else the 4 weeks' (slope). */
+  function statsWindowSlope(stats, key) {
+    const s = stats || {}, win = ((s.pace || {}).windows || {})[normalizePaceWindow(key)];
+    return win && win.slope ? win.slope : s.slope;
+  }
+
+  /** #60 ("the y axis aligns to start at the bottom at minimum of this period"): the y axis of the shown values,
+   *  [lo, hi]: lo = their minimum rounded down to a power of ten of their spread (0 stays 0; a flat line: 2 under
+   *  it), hi = lo + a round height (niceMax) that fits them, never above the whole Qur'an (cap). */
+  function statsYRange(values, cap) {
+    const vs = values.map(v => +v || 0), max = Math.max(0, ...vs), min = vs.length ? Math.min(...vs) : 0;
+    let lo = 0;
+    if (min > 0) {
+      const spread = max - min;
+      if (spread <= 0) lo = Math.max(0, min - 2);
+      else { const step = Math.pow(10, Math.floor(Math.log10(spread))); lo = Math.floor(min / step) * step; }
+    }
+    return [lo, lo + niceMax(max - lo, cap ? cap - lo : 0)];
+  }
+
   /** U1.19: the inline SVG chart of stats.series ({start, days: day offsets, learned, perfect, next}): one 2 px
-   *  polyline per shown line (opts.show {learned, perfect, next}, default all; the y axis from 0 to a round top that
-   *  fits the shown lines), a dot at today's value, grid lines at 0, the middle and the top, the first and last dates
-   *  under it, and a hidden guide line for the page's tap / hover readout. null with fewer than 2 points. */
+   *  polyline per shown line (opts.show {learned, perfect, next}, default all; the y axis from the shown lines'
+   *  rounded minimum (#60; 0 when one of them is 0) to a round top that fits them, statsYRange), a dot at today's
+   *  value, grid lines at the bottom, the middle and the top, the first and last dates under it, and a hidden guide
+   *  line for the page's tap / hover readout. null with fewer than 2 points. */
   function statsChartSvg(series, opts) {
     opts = opts || {};
     const days = series && Array.isArray(series.days) ? series.days : [];
@@ -951,16 +1703,15 @@
     const G = STATS_CHART, W = G.w, H = G.h, last = days[days.length - 1] || 1;
     const show = Object.assign({learned: true, perfect: true, next: true}, opts.show || {});
     const lines = STATS_LINES.filter(([k]) => show[k] && Array.isArray(series[k]) && series[k].length === days.length);
-    const top = niceMax(Math.max(0, ...lines.map(([k]) => Math.max(...series[k].map(v => +v || 0)))),
-      opts.total || 6236);
+    const [lo, top] = statsYRange(lines.flatMap(([k]) => series[k]), opts.total || 6236);
     const r1 = (v) => Math.round(v * 10) / 10;
     const x = (d) => r1(G.l + (W - G.l - G.r) * d / last);
-    const y = (v) => r1(G.t + (H - G.t - G.b) * (1 - (+v || 0) / top));
-    const ticks = [0, top / 2, top].filter(v => Number.isInteger(v));
+    const y = (v) => r1(G.t + (H - G.t - G.b) * (1 - ((+v || 0) - lo) / (top - lo)));
+    const ticks = [lo, (lo + top) / 2, top].filter(v => Number.isInteger(v));
     const out = [`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${
       lines.map(([k, name]) => `${name} ${series[k][series[k].length - 1]}`).join(', ') || 'No line shown'}">`];
     for (const v of ticks) {
-      out.push(`<line class="grid${v === 0 ? ' base' : ''}" x1="${G.l}" x2="${W - G.r}" y1="${y(v)}" y2="${y(v)}"/>`);
+      out.push(`<line class="grid${v === lo ? ' base' : ''}" x1="${G.l}" x2="${W - G.r}" y1="${y(v)}" y2="${y(v)}"/>`);
       out.push(`<text class="tick" x="${G.l - 4}" y="${y(v) + 3}" text-anchor="end">${v}</text>`);
     }
     out.push(`<text class="tick" x="${G.l}" y="${H - 5}" text-anchor="start">${dayText(series.start)}</text>`);
@@ -1194,17 +1945,16 @@
     return none;
   }
 
-  /** #36: what the page plays for a cue (`before`, B3.8: {kind: 'ayah' | 'words', clip} or {kind: 'surah', name, text,
-   *  fallback}; clip / fallback = reciter_clip answers): [{clip}] (Yasser's clip as the engine gave it), or for a
-   *  surah's first ayah [{speak: text, fallback}] when the device has an offline Arabic voice (ctx.tts:
-   *  engine.speaker.available(); the page plays the fallback when speaking fails), else [{clip: fallback}] (the
-   *  basmala, the ta'awwudh for Al-Fatihah and At-Tawbah). [] for nothing playable. */
+  /** #36 / #58 (v0.18, user 2026-10-28: "I hear a3outhou billeh, last eya of Al kahf, 'sourat Mariem'"): what the page
+   *  plays for a cue (`before`, B3.8: {kind, surah, ayah, name?, steps: [clip…], opening}): its steps in order, each
+   *  a clip as the engine gave it (Yasser's ayah or words before; at a surah's first ayah the previous surah's last
+   *  ayah, then the recorded «سورة …», static/audio/surah_names/NNN.mp3); ctx.opening puts the ta'awwudh first (the
+   *  car's automatic start only). [] for nothing playable. */
   function cueSteps(before, ctx) {
     const b = before && typeof before === 'object' ? before : {};
-    if (b.kind === 'ayah' || b.kind === 'words') return b.clip ? [{clip: b.clip}] : [];
-    if (b.kind !== 'surah') return [];
-    if (ctx && ctx.tts && b.text) return [{speak: String(b.text), fallback: b.fallback || null}];
-    return b.fallback ? [{clip: b.fallback}] : [];
+    const steps = (Array.isArray(b.steps) ? b.steps : []).filter(c => c && c.url).map(c => ({clip: c}));
+    if (steps.length && ctx && ctx.opening && b.opening && b.opening.url) steps.unshift({clip: b.opening});
+    return steps;
   }
 
   // ---------------------------------------------------------------- X2.4b the revealed word is on screen (user, 2026-10-09)
@@ -1421,7 +2171,7 @@
   function storageDetail(r) {
     const f = +r.files || 0;
     switch (r.id) {
-      case 'listen_audio': return `Yasser Al-Dossary's ayah files kept for Listen and the voice commands (${nOf(f, 'file')}). Deleted files download again when they are played.`;
+      case 'listen_audio': return `The reciters' ayah files kept for Listen and the voice commands (${nOf(f, 'file')}). Deleted files download again when they are played.`;
       case 'recordings': return `Your voice (${nOf(f, 'recording')}${r.orphans ? `, ${r.orphans} without their session` : ''}). Deleting keeps your verdicts, the history and Progress; the sessions can no longer be replayed.`;
       case 'history': return `The verdicts of ${nOf(+r.sessions || 0, 'session')} and ${nOf(+r.marks || 0, 'mark')}: Progress, the word colours, the Listen buttons and the corrections Meddeb learned from you come from them.`;
       case 'model': return 'Needed to recite; Meddeb would download it again by itself.';
@@ -1471,7 +2221,7 @@
   function storageConfirmText(row) {
     const s = row.size;
     switch (row.id) {
-      case 'listen_audio': return `Delete the Listen audio (${s}, ${nOf(row.files, 'file')})? Yasser Al-Dossary's ayat download again when they are played (internet needed).`;
+      case 'listen_audio': return `Delete the Listen audio (${s}, ${nOf(row.files, 'file')})? The reciters' ayat download again when they are played (internet needed).`;
       case 'recordings': return `Delete your recordings (${s}, ${nOf(row.files, 'recording')})? Your verdicts, the history and Progress stay, but the sessions can no longer be replayed.` + UNDO;
       case 'history': return `Delete your mistake history (${s}: ${nOf(row.sessions, 'session')}, ${nOf(row.marks, 'mark')})? Progress, the word colours, the Listen buttons and the corrections Meddeb learned from you start again from zero. Your recordings stay on the device (and in an export), but Meddeb can no longer replay or browse those sessions. Your settings stay.` + UNDO;
       case 'screenshots': return `Delete the bug report screenshots (${s}, ${nOf(row.files, 'file')})? Only Meddeb's own screenshots are deleted.`;
@@ -1490,6 +2240,43 @@
     const kept = r.kept ? ` ${nOf(+r.kept, 'file')} in use ${+r.kept === 1 ? 'was' : 'were'} kept.` : '';
     return {text: `${name} deleted: ${formatBytes(r.bytes)} freed.${kept}`, error: false};
   }
+
+  // ---------------------------------------------------------------- D4.9 the export's choices (#71, v0.19)
+  const EXPORT_KINDS = ['settings', 'mistakes', 'recordings'];
+  const EXPORT_NAMES = {settings: 'Settings and logs', mistakes: 'Mistake history', recordings: 'Recordings'};
+
+  /** #71 (user, 2026-10-29: "[ ] settings (taille in Mb) [ ] mistakes (taille in Mb) [ ] recordings (taille in Gb) by
+   *  default all checked then you clic export"): the export dialog from export_plan's kinds (or its whole answer; null
+   *  when the sizes could not be measured: the labels without a size) and the ticked ids (null: all) -> {rows: [{id,
+   *  name, label, bytes, size, checked}] in the fixed order, kinds (the ticked ones, that order), totalBytes, total
+   *  ("Total: 1.1 GB", '' without sizes), canExport (one at least)}. Sizes on disk, U1.17's units. */
+  function exportChoices(plan, checked) {
+    const list = Array.isArray(plan) ? plan : plan && Array.isArray(plan.kinds) ? plan.kinds : null;
+    const byId = new Map((list || []).filter(r => r && EXPORT_NAMES[r.id]).map(r => [r.id, r]));
+    const ticked = Array.isArray(checked) ? new Set(checked) : null;
+    let totalBytes = 0;
+    const rows = EXPORT_KINDS.map((id) => {
+      const r = byId.get(id), on = ticked ? ticked.has(id) : true;
+      const bytes = r ? Math.max(0, +r.bytes || 0) : null;
+      if (on && bytes) totalBytes += bytes;
+      return {id, name: EXPORT_NAMES[id], label: bytes == null ? EXPORT_NAMES[id] : `${EXPORT_NAMES[id]} (${formatBytes(bytes)})`,
+        bytes, size: bytes == null ? '' : formatBytes(bytes), checked: on};
+    });
+    const kinds = rows.filter(r => r.checked).map(r => r.id);
+    return {rows, kinds, totalBytes, total: list ? `Total: ${formatBytes(totalBytes)}` : '', canExport: kinds.length > 0};
+  }
+
+  /** D4.9 (Android 10+): the line under Settings › Profile's "Keep a copy for the PC" (android_shared_copy's answer):
+   *  "Last copy: 2026-10-30 09:12, 6.8 MB (Download/Meddeb/<name>)." or "No copy yet.". Local time. */
+  function sharedCopyLine(s) {
+    if (!s || !(+s.last_ms > 0)) return 'No copy yet.';
+    const d = new Date(+s.last_ms), z = (n) => String(n).padStart(2, '0');
+    const when = `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+    return `Last copy: ${when}, ${formatBytes(s.bytes)}${s.name ? ` (Download/Meddeb/${s.name})` : ''}.`;
+  }
+  // emulator check of 0.19 (2026-10-30): the copy a tick asks for is written on its own thread a few seconds later
+  // (5.8 MB in 3.5 s): the page asks for the line again after these waits (ms), so it never stays at "No copy yet."
+  const SHARED_COPY_RECHECK_MS = [5000, 20000];
 
   // ---------------------------------------------------------------- P5.16 / U1.18 the app update (issue #12, 2026-10-13)
   const UPDATE_OFFERED = new Set(['available', 'downloading', 'verifying', 'permission', 'ready', 'installing', 'failed']);
@@ -1522,19 +2309,26 @@
     const step = u.auto === true ? String(u.auto_step || '') : '';
     const autoText = AUTO_STEP_TEXT.get(step) || (st === 'ready' && (step === 'wait_background' || step === 'install')
       ? ' It installs when you leave Meddeb.' : '');
+    // #76 (v0.20, D3): an offer from update.json's beta entry says so; on stable (Beta versions unticked) a newer beta
+    // is named (beta_latest), and a newer beta installed waits for a newer stable (stable_code: the last check's stable
+    // versionCode; an older app sends none of these: nothing changes)
+    const onBeta = u.beta === true, name = u.channel === 'beta' ? `${lat} (beta)` : lat;
+    const betaTip = !onBeta && u.beta_latest ? ` Beta ${u.beta_latest} is available: tick Beta versions to get it.` : '';
+    const ahead = !onBeta && u.stable_code != null && +u.current_code > +u.stable_code;
     switch (st) {
-      case 'up_to_date': out.text = 'Meddeb is up to date.'; break;
+      case 'up_to_date': out.text = 'Meddeb is up to date.'
+        + (ahead ? ` Beta versions are off: the next stable version newer than ${cur} will be offered.` : '') + betaTip; break;
       case 'check_failed': out.text = `Could not check for updates${why0 ? ': ' + why0 : ''}.`; out.button = {label: 'Check again', action: 'check'}; break;
-      case 'available': out.text = `Meddeb ${lat} is available (${mb1(u.size)} MB).` + (u.required ? ` Meddeb ${cur} is no longer supported: please update.` : '')
-        + autoText;
+      case 'available': out.text = `Meddeb ${name} is available (${mb1(u.size)} MB).` + (u.required ? ` Meddeb ${cur} is no longer supported: please update.` : '')
+        + autoText + betaTip;
         out.notes = notes; out.button = {label, action: 'start'}; break;
-      case 'downloading': out.text = `Downloading Meddeb ${lat}: ${pct} % (${mb1(u.bytes)} of ${mb1(u.total)} MB)`; out.bar = pct; out.cancel = true; break;
+      case 'downloading': out.text = `Downloading Meddeb ${name}: ${pct} % (${mb1(u.bytes)} of ${mb1(u.total)} MB)`; out.bar = pct; out.cancel = true; break;
       case 'verifying': out.text = 'Checking the download…'; out.bar = 100; break;
       case 'permission': out.text = 'Android asks once: allow Meddeb to install its updates (Install unknown apps > Allow from this source), then come back.';
         out.button = {label: 'Open the setting', action: 'settings'}; break;
-      case 'ready': out.text = `Meddeb ${lat} is downloaded and verified.` + (why ? ` ${why}.` : '')
+      case 'ready': out.text = `Meddeb ${name} is downloaded and verified.` + (why ? ` ${why}.` : '')
         + autoText; out.button = {label: 'Install', action: 'start'}; break;
-      case 'installing': out.text = `Installing Meddeb ${lat}: Meddeb closes while Android updates it` + (u.notify ? '; a notification opens it again' : '')
+      case 'installing': out.text = `Installing Meddeb ${name}: Meddeb closes while Android updates it` + (u.notify ? '; a notification opens it again' : '')
         + '. Your profile and the speech model stay.'; break;
       case 'failed': out.text = `The update failed${why0 ? ': ' + why0 : ''}.`; out.button = {label: 'Try again', action: 'start'}; break;
       case 'needs_android': out.text = `Meddeb ${lat} needs Android ${u.min_android} or newer.`; break;
@@ -1583,26 +2377,95 @@
     return left > 0 ? `Download the update (${mb1(left)} MB) over mobile data?` : null;
   }
 
+  /** #79 (X2.5b): the alarm threshold's precision / recall, measured by d02_PoC/benchmark/replay_sessions.py on the
+   *  user's 8 recorded sessions (results/threshold_curve.json; tests/test_threshold_curve.py keeps them equal):
+   *  positives = the words he marked as mistakes, known_false = the words he marked correct; per threshold the alarms,
+   *  the marked mistakes caught and the marked-correct words flagged (fa_user). */
+  const THRESHOLD_CURVE = {model: 'fastconformer_quran', positives: 7, known_false: 10, rows: [
+    {threshold: 0.5, alarms: 31, caught: 4, fa_user: 6},
+    {threshold: 0.55, alarms: 31, caught: 4, fa_user: 6},
+    {threshold: 0.6, alarms: 30, caught: 4, fa_user: 6},
+    {threshold: 0.65, alarms: 26, caught: 4, fa_user: 5},
+    {threshold: 0.7, alarms: 24, caught: 4, fa_user: 5},
+    {threshold: 0.75, alarms: 21, caught: 4, fa_user: 2},
+    {threshold: 0.8, alarms: 17, caught: 3, fa_user: 1},
+    {threshold: 0.85, alarms: 10, caught: 2, fa_user: 0},
+    {threshold: 0.9, alarms: 7, caught: 1, fa_user: 0},
+    {threshold: 0.95, alarms: 2, caught: 0, fa_user: 0},
+    {threshold: 1, alarms: 2, caught: 0, fa_user: 0},
+  ]};
+  const THRESHOLD_MIN = 0.5, THRESHOLD_DEFAULT = 0.6, THRESHOLD_STEP = 0.05;   // every flagged word scores >= 0.5
+
+  /** {threshold, precision (caught / (caught + fa_user), null when nothing is flagged), recall (caught / positives),
+   *  alarms, caught, fa_user} at a threshold of the curve (a number or the slider's string), null off the curve. */
+  function thresholdPR(t) {
+    const row = THRESHOLD_CURVE.rows.find(r => Math.abs(r.threshold - Number(t)) < 1e-9);
+    if (!row) return null;
+    const flagged = row.caught + row.fa_user;
+    return {threshold: row.threshold, precision: flagged ? row.caught / flagged : null,
+      recall: row.caught / THRESHOLD_CURVE.positives, alarms: row.alarms, caught: row.caught, fa_user: row.fa_user};
+  }
+
+  /** The slider's top: the highest threshold whose recall equals the default's and whose precision is not lower
+   *  (above it the replay loses marked mistakes: "a value that make no sense", #79). */
+  const THRESHOLD_MAX = (() => {
+    const base = thresholdPR(THRESHOLD_DEFAULT);
+    return THRESHOLD_CURVE.rows.map(r => thresholdPR(r.threshold))
+      .filter(p => p.recall === base.recall && p.precision != null && p.precision >= base.precision)
+      .reduce((m, p) => Math.max(m, p.threshold), THRESHOLD_DEFAULT);
+  })();
+
+  /** A saved value or a ?threshold= on the slider: on the 0.05 grid within [THRESHOLD_MIN, THRESHOLD_MAX]; not a
+   *  number (null, '', 'abc') -> the default 0.6. */
+  function clampThreshold(v) {
+    const n = v === null || v === undefined || v === '' ? NaN : Number(v);
+    if (!Number.isFinite(n)) return THRESHOLD_DEFAULT;
+    const grid = Math.round(n / THRESHOLD_STEP) * THRESHOLD_STEP;
+    return +Math.min(THRESHOLD_MAX, Math.max(THRESHOLD_MIN, grid)).toFixed(2);
+  }
+
+  /** The line under the slider: "0.60: precision 40 % · recall 57 %" for the saved value; while the user drags to
+   *  another one, that one's first and "(now 0.60: …)"; another model than the curve's: not measured. */
+  function thresholdLabel(saved, dragged, model) {
+    const fmt = (t) => Number(t).toFixed(2);
+    const shown = dragged == null || dragged === '' ? saved : dragged;
+    if (model !== THRESHOLD_CURVE.model) return `${fmt(shown)}: not measured for this model`;
+    const text = (t) => {
+      const p = thresholdPR(t);
+      if (!p) return `${fmt(t)}: not measured`;
+      const pct = (x) => x == null ? '–' : Math.round(100 * x);
+      return `${fmt(t)}: precision ${pct(p.precision)} % · recall ${pct(p.recall)} %`;
+    };
+    return Math.abs(Number(shown) - Number(saved)) < 1e-9 ? text(saved) : `${text(shown)} (now ${text(saved)})`;
+  }
+
   const api = {isMistake, sessionRemoveAction, lastOutcome, removeLabel, stateAfterMark, historyAfterMark, markWhen, swipePage,
     pullDown, pullUp, starterHintAvailable, starterHintLines, cueStarterHint,
     reviewOn, reviewCounters, reviewCardView, reviewCueKeys, reviewTargetLast, reviewNextState, reviewResultView,
-    DOUBLE_TAP_MS, POP_DELAY_MS, wordTapStep, contextMistake, doubleTapPlan, startAyah,
+    reviewSpanText, reviewTodayText, reviewNextCardOf, reviewWaitText, cardStopAction, silentReveal, revealOutside, hintsRead, modeMsg,
+    DOUBLE_TAP_MS, POP_DELAY_MS, wordTapStep, contextMistake, doubleTapStep, labelState, historyState, aiNature, plainState,
+    settledState,
+    startAyah,
     DEFAULT_SORT, normalizeSortState, nextSortState, sortProgressRows, progressSurahLabels, daysAgoText,
-    statusLabel, summaryVerdict, shownHeard, readingText, shouldFollowCursor, isOutsideTap, mergeIndexMap,
-    LISTEN_DEFAULT, clampListenForm, listenParams, playsText, listenFormFromTarget, nowPlayingText, linkLicenceFiles, centreLines,
-    listenOptionsOn, listenPlayOptions, mulberry32, passShape, marginSteps, passClips, fadeVolume,
-    modelStep, modelDownloadView, toastMs, startAfterModel, wordVisible, modeChangeEffect, levelClass, newLearnedLine, statsTodayLines,
-    progressChecks, dayText, averageWindowText, slopeText, finishText, PACE_WINDOWS, normalizePaceWindow,
-    paceWindowText, paceLines, STATS_LINES, STATS_CHART, statsChartSvg,
+    statusLabel, summaryVerdict, shownHeard, readingText, insLines, insView, gapAt, wordAt, shouldFollowCursor, isOutsideTap,
+    mergeIndexMap,
+    LISTEN_DEFAULT, RECITER_IDS, reciterOptions, clampListenForm, listenParams, playsText, listenFormFromTarget, nowPlayingText, linkLicenceFiles, centreLines,
+    listenOptionsOn, listenPlayOptions, mulberry32, passShape, marginSteps, passClips, fadeVolume, migrateListenForm,
+    listenEstimate, formatDuration, listenDurationText,
+    modelStep, modelDownloadView, toastMs, readingMs, statsSeriesSince, statsWindowSeries, statsWindowSlope, reviewRowView, reviewSegment, reviewHelpBlocks, adoptsCarSession, startAfterModel, startPlan, wordVisible, modeChangeEffect, levelClass, newLearnedLine, statsTodayLines,
+    progressChecks, dayText, averageWindowText, slopeText, finishText, PACE_WINDOWS, normalizePaceWindow, detectionLines,
+    paceWindowText, paceLines, averageLines, STATS_LINES, STATS_CHART, statsChartSvg,
     statsPointAt, statsPointText, LISTEN_ON, barMode, modeStopsListen,
     listenBar, listenFollow,
     versionsText, FITS, FONT_MAX, normalizeFit, nextFit, fitInfo, fitFont, textWidthCap, pinchFont, voiceAction, cueSteps,
     revealedRange, revealIndices, revealScroll, joinsPrevious, writtenGroups, writtenText, groupView,
-    confirming, unsaidMistake, placeholderKind, ayahMarkerShown, sessionOutcome, wordState, sessionRevealMsg, barSignals,
+    confirming, unsaidMistake, placeholderKind, ayahMarkerShown, ayahMarkerText, sessionOutcome, wordState, sessionRevealMsg, barSignals,
     defaultOwnSize, pinchStep, WHEEL_GAP_MS, wheelStep, wheelPixels, sizeToast, CLICK_PEAK,
     LONG_PRESS_MS, LONG_PRESS_SLOP, pressStep, summaryNav, summaryHead, reportToast,
     formatBytes, STORAGE_MAIN, STORAGE_OTHER, storageView, storageConfirmText, storageDoneText,
-    updateView, updateToast, updateConfirm, autoUpdateAfter};
+    EXPORT_KINDS, exportChoices, sharedCopyLine, SHARED_COPY_RECHECK_MS,
+    updateView, updateToast, updateConfirm, autoUpdateAfter,
+    THRESHOLD_CURVE, THRESHOLD_MIN, THRESHOLD_MAX, thresholdPR, clampThreshold, thresholdLabel};
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.MeddebLogic = api;
 })(typeof window !== 'undefined' ? window : this);

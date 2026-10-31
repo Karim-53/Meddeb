@@ -170,6 +170,60 @@ Contents
 - Notes: credit shown in Listen: "Recitation: Yasser Al-Dossary — audio files: EveryAyah.com". The files
   are not re-hosted; re-hosting them would need the rights holders' permission.
 
+### Recitation by Yasser Salamah (EveryAyah.com)
+
+- Version: one MP3 file per ayah, 128 kbps (folder Yaser_Salamah_128kbps, 6,236 ayat)
+- SPDX: NOASSERTION. EveryAyah's surah archives say that the files may be used only under the licence of
+  VerseByVerseQuran.com; the archived copy of that licence (2012) is CC BY-NC 2.5 Canada.
+- Copyright: recitation by Yasser Salamah; files published by EveryAyah.com (VerseByVerseQuran.com)
+- Source: https://everyayah.com/data/Yaser_Salamah_128kbps/ (served through the BunnyCDN network)
+- Ships in: not in the APK nor in any Meddeb repository. Android app, downloaded: Listen, when this reciter is
+  chosen, stores the ayat it plays (and the rest of that surah, fetched on an unmetered network) in the app's own
+  storage, for the user's own offline listening. PC app and web app: played from EveryAyah directly (the
+  browser may cache them).
+- Licence text: none bundled; CC BY-NC 2.5 Canada: https://creativecommons.org/licenses/by-nc/2.5/ca/
+  (archived licence page:
+  http://web.archive.org/web/20121021062917/http://www.versebyversequran.com/site/license)
+- Notes: credit shown in Listen: "Recitation: Yasser Salamah — audio files: EveryAyah.com" (Listen's menu says
+  "Yasser Salamah (Hadr)", the user's wording; EveryAyah names the folder "Yaser Salamah"). The files are not
+  re-hosted; re-hosting them would need the rights holders' permission.
+
+### Recitation by Mishary Alafasy (EveryAyah.com)
+
+- Version: one MP3 file per ayah, 128 kbps (folder Alafasy_128kbps, 6,236 ayat)
+- SPDX: NOASSERTION. EveryAyah's surah archives say that the files may be used only under the licence of
+  VerseByVerseQuran.com; the archived copy of that licence (2012) is CC BY-NC 2.5 Canada.
+- Copyright: recitation by Mishary Rashid Alafasy; files published by EveryAyah.com (VerseByVerseQuran.com)
+- Source: https://everyayah.com/data/Alafasy_128kbps/ (served through the BunnyCDN network)
+- Ships in: not in the APK nor in any Meddeb repository. Android app, downloaded: Listen, when this reciter is
+  chosen, stores the ayat it plays (and the rest of that surah, fetched on an unmetered network) in the app's own
+  storage, for the user's own offline listening. PC app and web app: played from EveryAyah directly (the
+  browser may cache them).
+- Licence text: none bundled; CC BY-NC 2.5 Canada: https://creativecommons.org/licenses/by-nc/2.5/ca/
+  (archived licence page:
+  http://web.archive.org/web/20121021062917/http://www.versebyversequran.com/site/license)
+- Notes: credit shown in Listen: "Recitation: Mishary Alafasy — audio files: EveryAyah.com". The files are not
+  re-hosted; re-hosting them would need the rights holders' permission.
+
+### Recitation by Fares Abbad (EveryAyah.com)
+
+- Version: one MP3 file per ayah, 64 kbps (folder Fares_Abbad_64kbps, 6,236 ayat)
+- SPDX: NOASSERTION. EveryAyah's surah archives say that the files may be used only under the licence of
+  VerseByVerseQuran.com; the archived copy of that licence (2012) is CC BY-NC 2.5 Canada.
+- Copyright: recitation by Fares Abbad; files published by EveryAyah.com (VerseByVerseQuran.com); the folder's
+  000_details.txt says that the audio was provided by Ebrahim Badiee (it states no licence)
+- Source: https://everyayah.com/data/Fares_Abbad_64kbps/ (served through the BunnyCDN network)
+- Ships in: not in the APK nor in any Meddeb repository. Android app, downloaded: Listen, when this reciter is
+  chosen, stores the ayat it plays (and the rest of that surah, fetched on an unmetered network) in the app's own
+  storage, for the user's own offline listening. PC app and web app: played from EveryAyah directly (the
+  browser may cache them).
+- Licence text: none bundled; CC BY-NC 2.5 Canada: https://creativecommons.org/licenses/by-nc/2.5/ca/
+  (archived licence page:
+  http://web.archive.org/web/20121021062917/http://www.versebyversequran.com/site/license)
+- Notes: credit shown in Listen: "Recitation: Fares Abbad — audio files: EveryAyah.com". The files embed a
+  cover picture, which Meddeb does not show. The files are not re-hosted; re-hosting them would need the
+  rights holders' permission.
+
 ### Word timings of the recitation by Yasser Al-Dossary (yasser_word_timings.json.gz)
 
 - Version: format 1, computed in October 2026 by tools/build_word_timings.py over the 6,236 files of

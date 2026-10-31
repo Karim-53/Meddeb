@@ -27,7 +27,7 @@ Meddeb, a local and private Qur'an recitation coach. Website: https://karim-53.g
 <tr>
 <td align="center" width="33%"><img src="screenshots/04_offline.webp" width="220" alt="A recitation with the phone in airplane mode"><br><b>Offline and private</b><br><sub>After a one-time model download, the recognition runs on your phone, even in airplane mode: no account, and your voice never leaves the phone.</sub></td>
 <td align="center" width="33%"><img src="screenshots/05_progress.webp" width="220" alt="The Stats page with a chart of the progress"><br><b>Your progress</b><br><sub>The ayat you learned today and overall, your weekly pace, and a chart of your progress day by day.</sub></td>
-<td align="center" width="33%"><img src="screenshots/06_listen.webp" width="220" alt="The Listen page playing the weakest page"><br><b>Listen</b><br><sub>Yasser Al-Dossary recites your weakest page, the next ayah to learn or your manzil, as often as you like, with the screen off or in the car.</sub></td>
+<td align="center" width="33%"><img src="screenshots/06_listen.webp" width="220" alt="The Listen page playing the weakest page"><br><b>Listen</b><br><sub>Yasser Al-Dossary or another reciter you pick recites your weakest page, next ayah to learn or manzil, as often as you like, screen off or in the car.</sub></td>
 </tr>
 </table>
 

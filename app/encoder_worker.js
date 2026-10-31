@@ -66,7 +66,7 @@ async function fetchPart(url, onBytes) {
 async function download(base) {
   const man = await (await fetch(base + 'manifest.json', {cache: 'no-store'})).json();
   if (man.file !== FILE || !Array.isArray(man.parts)) throw new Error('unexpected model manifest');
-  try { await navigator.storage.persist(); } catch (e) { /* the browser decides */ }
+  // #74 (v0.20): persistent storage is asked by the page (engine.js keepStorage): the API is the window's, not a worker's
   const dir = await modelDir(true);
   let prog = await readJson(dir, 'progress.json');
   if (!prog || prog.sha256 !== man.sha256) prog = {sha256: man.sha256, done: []};

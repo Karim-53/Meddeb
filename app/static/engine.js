@@ -19,6 +19,7 @@
     mark: (p) => ['POST', '/api/marks', p],
     listen_targets: () => ['GET', '/api/listen/targets'],          // U1.13 quick buttons (B3.14)
     listen_plan: (p) => ['POST', '/api/listen/plan', p],            // a Listen form -> the ordered clips
+    listen_reciters: () => ['GET', '/api/listen/reciters'],         // #93 (v0.20) the Listen form's Reciter select
     versions: () => ['GET', '/api/versions'],                       // U1.12 About: {app, platform, items, profile}
     // X2.15 / D4.6: the reciter's ayah file and the part a voice command plays (from_idx / to_idx omitted = the ayah's ends)
     reciter_clip: (p) => ['GET', '/api/reciter_clip?' + ['surah', 'ayah', 'from_idx', 'to_idx']
@@ -29,63 +30,15 @@
     report: (p) => ['POST', '/api/report', p],                     // U1.16 report a bug (D12, 2026-10-10)
     storage: () => ['GET', '/api/storage'],                         // U1.17 Settings > Space used (issue #14)
     storage_delete: (p) => ['POST', '/api/storage/delete', p],
+    export_plan: () => ['GET', '/api/profile/export_plan'],          // D4.9 (#71) the export dialog's kinds and sizes
     starter_hint: (p) => ['GET', `/api/starter_hint/${p.page}`],    // #40 the end of the page before (Blind)
     // #39 (U1.20, B3.16): the Review page; the parameters go as the JSON body (Android: the generic call)
     review_queue: () => ['GET', '/api/review/queue'],               // {today, counters, cards, suspended}
     review_card: (p) => ['POST', '/api/review/card', p],            // {card} -> the run-up, the cue, the start
     review_result: (p) => ['POST', '/api/review/result', p],        // {card, folder} -> ✓ / ✗ per ayah, the next due
     review_action: (p) => ['POST', '/api/review/action', p],        // {card, action} -> the new queue
+    review_help: (p) => ['POST', '/api/review/help', p],            // #57: {card, folder} -> what went wrong, a method
   };
-
-  /* #36 (X2.15): the device's own voice for a surah's name before a session's first word («سورة البقرة»; no reciter file
-     has one). P0.2: only a voice that runs on the device: the browser's speechSynthesis with an Arabic voice whose
-     localService is true (Chrome's "Google" voices send the text to Google's servers: refused). speak resolves
-     {status: 'ended' | 'stopped' | 'unavailable' | 'failed', error?}, never rejects; the page plays its fallback (the
-     basmala) for anything but ended / stopped. */
-  function webSpeaker() {
-    const ss = () => window.speechSynthesis || null;
-    const voice = () => {
-      const s = ss(); if (!s || !window.SpeechSynthesisUtterance) return null;
-      let vs = [];
-      try { vs = s.getVoices() || []; } catch (e) { /* no voices */ }
-      return vs.find(v => /^ar(?:[-_]|$)/i.test(v.lang || '') && v.localService === true) || null;
-    };
-    let cur = null;   // {end} of the utterance being spoken
-    voice();          // Chrome loads its voice list on the first ask
-    const stop = () => {
-      const c = cur; cur = null;
-      if (c) c.end('stopped');
-      const s = ss(); if (s) { try { s.cancel(); } catch (e) { /* nothing queued */ } }
-    };
-    return {
-      available: () => !!voice(),
-      speak: (text) => new Promise((resolve) => {
-        const v = voice();
-        if (!v) { resolve({status: 'unavailable'}); return; }
-        stop();
-        let done = false, guard = null;
-        const end = (status, error) => {
-          if (done) return;
-          done = true; clearTimeout(guard); if (cur && cur.end === end) cur = null;
-          resolve(error ? {status, error} : {status});
-        };
-        const u = new window.SpeechSynthesisUtterance(String(text));
-        u.voice = v; u.lang = v.lang;
-        u.onend = () => end('ended');
-        u.onerror = (e) => {
-          const why = e && e.error ? String(e.error) : 'speech failed';
-          if (why === 'interrupted' || why === 'canceled') end('stopped'); else end('failed', why);
-        };
-        cur = {end};
-        guard = setTimeout(() => {   // a voice that never ends
-          end('failed', 'no end after 15 s');
-          try { ss().cancel(); } catch (e) { /* gone */ }
-        }, 15000);
-        try { ss().speak(u); } catch (e) { end('failed', e && e.message ? e.message : String(e)); }
-      }),
-      stop,
-    };
-  }
 
   async function failure(resp) {
     let detail = resp.statusText;
@@ -98,6 +51,8 @@
   class HttpEngine {
     constructor() {
       this.kind = 'http'; this.nativeMic = false;
+      // #78 (D5, v0.20): a press waits for the model before the microphone opens (only Android records while it loads)
+      this.holdsAudio = false;
       // #39 (user, 2026-10-25: "only the Android app, not the web for now"): what this engine offers beyond the
       // shared calls; the PC has the review calls (server.py) so the page can be tried there; an engine without
       // `features` (the web's) has none
@@ -108,8 +63,6 @@
       this.player = window.MeddebListenPlayer ? new window.MeddebListenPlayer() : null;
       // X2.15: the reciter's words after a voice command (static/listen_player.js MeddebClipPlayer, Web Audio)
       this.clipPlayer = window.MeddebClipPlayer ? new window.MeddebClipPlayer() : null;
-      // #36: a surah's name by the browser's own Arabic voice (an offline one only)
-      this.speaker = webSpeaker();
     }
 
     /** U1.14: the first mushaf page is drawn (Android hides its native start screen; nothing to do here). */
@@ -135,9 +88,12 @@
       return resp.blob();
     }
 
-    /** D4.4: the profile as a zip download; returns the message to show. */
-    async exportProfile() {
-      const resp = await fetch('/api/profile/export');
+    /** D4.9 (#71, v0.19): {kinds: [{id, bytes, files}]}, the export dialog's sizes (App.export_plan). */
+    exportPlan() { return this.call('export_plan'); }
+
+    /** D4.4: the profile as a zip download; returns the message to show. D4.9: kinds = the ticked ones (null: all). */
+    async exportProfile(kinds) {
+      const resp = await fetch('/api/profile/export' + (kinds ? `?kinds=${q(kinds.join(','))}` : ''));
       if (!resp.ok) throw await failure(resp);
       const name = (/filename="([^"]+)"/.exec(resp.headers.get('Content-Disposition') || '') || [])[1] || 'meddeb_profile1.zip';
       const a = document.createElement('a');
@@ -152,7 +108,7 @@
       const resp = await fetch('/api/profile/import', {method: 'POST', body: file});
       if (!resp.ok) throw await failure(resp);
       const r = await resp.json();
-      return `Profile imported (the previous one is kept as ${r.backup}).`;
+      return `Profile imported (the previous one is kept as ${r.backup}).${missingText(r.missing, r.backup, r.partial)}`;
     }
 
     /** U1.16 (D12, 2026-10-10; D3 v0.9): the PC takes no screenshot (the issue says "Screenshot: none"). */
@@ -193,6 +149,9 @@
   class AndroidEngine {
     constructor() {
       this.kind = 'android'; this.nativeMic = true;
+      // #78 (D5, v0.20): with the model installed, a press opens the session and the microphone at once while the model
+      // loads; Kotlin keeps the audio for Python, which catches up once the model is ready (ModelGate)
+      this.holdsAudio = true;
       this.features = {review: true};   // #39: the review calls (meddeb_android.py, through the generic call)
       this.pending = new Map(); this.nextId = 1; this.session = null; this.onProgress = null;
       // D2 (v0.9): Kotlin downloads the speech model by itself (D1): its model_download events {state: running | done |
@@ -202,8 +161,14 @@
       this.onUpdate = null;
       // U1.16 / issue #21: Kotlin's {type: shake} events (only while Settings > Phone allows it, shake(on)) go to onShake
       this.onShake = null;
+      // #59 (v0.18): the car's recitation started while the page has no session of its own (its `started` names the
+      // client car-N): onCarSession(m) may adopt it (adoptSession), and the page then follows it; Kotlin's {type:
+      // notice, text} (e.g. "You left the car: …") go to onNotice, the microphone notification's Pause / Resume / Stop
+      // for the page's own session ({type: remote, action}) to onRemote
+      this.onCarSession = null; this.onNotice = null; this.onRemote = null;
       this.update = {
-        check: (press) => this.call('android_update_check', press ? {press: true} : {}),   // press: Check again
+        check: (press) => this.call('android_update_check',   // press: Check again; #76: {press, channel} goes as it is
+            press && typeof press === 'object' ? press : press ? {press: true} : {}),
         start: () => this.call('android_update_start'),
         cancel: () => this.call('android_update_cancel'),
         settings: () => this.call('android_update_settings'),
@@ -232,15 +197,6 @@
           t1_ms: p.t1_ms == null ? null : p.t1_ms}, p.gain == null ? {} : {gain: p.gain})),
         stop: () => this.call('clip_stop'),
       };
-      // #36: a surah's name by Kotlin's TextToSpeech (Speaker.kt: an Arabic voice that needs no network, P0.2), through
-      // the generic call like clip_play: tts_speak{text} -> {status: 'ended' | 'stopped' | 'unavailable' | 'failed',
-      // error?}; Kotlin knows whether a voice exists (available: true here), an app without the call is 'unavailable'
-      this.speaker = {
-        available: () => true,
-        speak: (text) => this.call('tts_speak', {text: String(text)})
-          .then((r) => r || {status: 'failed'}, (e) => ({status: 'unavailable', error: e && e.message ? e.message : String(e)})),
-        stop: () => this.call('tts_stop').catch(() => null),
-      };
       window.__meddeb = {
         resolve: (id, ok, payload) => {
           const p = this.pending.get(id); if (!p) return;
@@ -254,10 +210,16 @@
           if (m.type === 'model_download') { if (this.onModelDownload) this.onModelDownload(m); return; }
           if (m.type === 'update_state') { if (this.onUpdate) this.onUpdate(m); return; }   // P5.16
           if (m.type === 'shake') { if (this.onShake) this.onShake(); return; }             // issue #21, never a session
+          if (m.type === 'notice') { if (this.onNotice) this.onNotice(String(m.text || ''), m.ms); return; }   // #59, as the web's
+          if (m.type === 'remote') { if (this.onRemote) this.onRemote(m); return; }         // #59: the notification's press
           if (m.type === 'listen_state') {
             const st = Object.assign({}, m); delete st.type;
             if (this.player.onState) this.player.onState(st);
             return;
+          }
+          // #59: a car session's start reaches a page with none of its own: the page may adopt it (adoptSession)
+          if (!this.session && m.type === 'started' && !m.search && /^car-/.test(String(m.client || '')) && this.onCarSession) {
+            this.onCarSession(m);
           }
           const s = this.session; if (!s) return;
           // the engine saves an older session (e.g. the car's) before it starts this one: its last state and done
@@ -284,9 +246,16 @@
     /** U1.14: the first mushaf page is drawn: MainActivity removes its native start screen (ta'awwudh + basmala). */
     uiReady() { if (window.MeddebNative.uiReady) window.MeddebNative.uiReady(); }
 
-    /** D4.4: Android's share sheet with the zip / Android's file picker (MainActivity). */
-    async exportProfile() { return (await this.call('android_export_profile')).text; }
+    /** D4.4: Android's share sheet with the zip / Android's file picker (MainActivity). D4.9 (#71, v0.19): the kinds
+     *  ticked (null: all); Python lists the files, Kotlin zips them on its own thread ("Exporting the profile: N %"
+     *  as android_progress events), then the share sheet. The import's question names the kinds the zip lacks. */
+    exportPlan() { return this.call('export_plan'); }
+    async exportProfile(kinds) { return (await this.call('android_export_profile', kinds ? {kinds} : {})).text; }
     async importProfile() { return (await this.call('android_import_profile')).text; }
+
+    /** D4.9 (#71, v0.19): Settings › Profile's copy for the PC in Download/Meddeb (Android 10+): {available, on,
+     *  last_ms, bytes, name}; {on} after the page saved shared_copy in settings.json (a copy follows when one is due). */
+    sharedCopy(p) { return this.call('android_shared_copy', p || {}); }
 
     /** U1.16 / D3 (v0.9): MainActivity copies the WebView's pixels (PixelCopy) into Download/Meddeb/meddeb_shot_<yyyy-mm-dd
      *  _HH-MM-SS>.png (the newest 10 kept) -> {ok, name, folder} ({ok: false, error} without one); taken first, before
@@ -303,6 +272,11 @@
      *  accelerometer). The PC engine has no shake. */
     shake(on) { return this.call('android_shake', {on: !!on}); }
 
+    /** #50 (v0.17): Settings > Phone > Keep the screen on for at least 5 min (on by default): Kotlin keeps the window's
+     *  screen on while Meddeb is in front and its last activity is under 5 minutes old, while `on` -> {}. The PC engine
+     *  has no keepScreen. */
+    keepScreen(on) { return this.call('android_keep_screen', {on: !!on}); }
+
     /** U1.17 (issue #14): Kotlin adds the phone's rows (Listen audio, the speech model, the app, the bug screenshots,
      *  the export copy) to Python's profile rows, and deletes the phone's kinds itself. */
     storage() { return this.call('android_storage'); }
@@ -315,8 +289,14 @@
       return new Blob([bytes], {type: 'audio/wav'});
     }
 
-    openSession(onMessage, onClose) {
+    openSession(onMessage, onClose) { return Promise.resolve(this.adoptSession(onMessage, onClose)); }
+
+    /** #59: the page's session object, at once (openSession's): for a car session the page adopts (onCarSession) it
+     *  takes that session's messages from its `started` on; what the page sends goes to Kotlin as ever, which hands a
+     *  car session's pause / resume / stop to the car's player. */
+    adoptSession(onMessage, onClose, car) {
       const session = {
+        car: !!car,
         // #20: a start over an open session (the session that goes on after Find where I am, start{after_search}) waits
         // for its own `started` again: the engine finishes the search first, and the search's last step and its `done`
         // must neither reach nor close the page's session
@@ -332,7 +312,7 @@
         _started: false,
       };
       this.session = session;
-      return Promise.resolve(session);
+      return session;
     }
   }
 
@@ -358,6 +338,20 @@
   /** D4.4: the profile's files [{rel, size, blob | bytes}] -> the zip the phone and the PC import (entries
    *  "profile1/<rel>", logs/ left out, stored: the recordings do not shrink), as a Blob built from the files' own Blobs
    *  (a large profile is never copied into memory). */
+  /** D4.9 (#71, v0.19): the import's warning about the kinds the zip lacked (its export.json), '' for none. T4 review
+   *  (2026-10-30): and those it held only in part (export.json "partial": Android's copy for the PC). */
+  const KIND_NAMES = {settings: 'settings and logs', mistakes: 'mistake history', recordings: 'recordings'};
+  function missingText(missing, backup, partial) {
+    const listOf = ks => {
+      const names = (ks || []).map(k => KIND_NAMES[k]).filter(Boolean);
+      return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0] || '';
+    };
+    const no = listOf(missing), part = listOf(partial);
+    if (!no && !part) return '';
+    const held = [no && `no ${no}`, part && `only part of the ${part}`].filter(Boolean).join(' and ');
+    return ` This export held ${held}: ${part ? 'the rest stays' : 'they stay'} only in ${backup}.`;
+  }
+
   async function profileZip(files, now) {
     const d = now || new Date();
     const time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
@@ -365,8 +359,7 @@
     const parts = [], central = [];
     let offset = 0;
     const enc = new TextEncoder();
-    for (const f of files) {
-      if (f.rel === 'logs' || f.rel.startsWith('logs/')) continue;
+    for (const f of files) {   // D4.9 (#71, v0.19): the worker's list (the kinds ticked; the logs with the settings)
       const name = enc.encode('profile1/' + f.rel);
       let crc = 0;
       if (f.bytes) crc = crc32(f.bytes);
@@ -410,15 +403,27 @@
     return {browser, os};
   }
 
+  /** #74 (v0.20, D1): the start notice (after 1.5 s); it names the download only when the runtime is not kept yet
+   *  (sw.js keeps app/vendor/ and app/engine/: ~34 MB). */
+  function startText(cached) {
+    return cached ? 'Starting Meddeb…' : 'Starting Meddeb… (the first visit downloads about 34 MB)';
+  }
+
+  /** Whether the service worker's cache (caches = window.caches) holds the runtime under the page's base: Pyodide's
+   *  wasm, one of its largest files. */
+  async function bundleCached(cs, base) {
+    try { return !!(cs && await cs.match(new URL('vendor/pyodide/pyodide.asm.wasm', base).href)); } catch (e) { return false; }
+  }
+
   class WorkerEngine {
     constructor() {
       this.kind = 'web'; this.nativeMic = false;
+      this.holdsAudio = false;       // #78 (D5): a press waits for the model, as on the PC
       this.onModelDownload = null;   // D2: the encoder worker's download of the model
       this.onNotice = null;          // (text, ms): the start, a new version of the app
       this.update = null;            // P5.16: no app update to install: a new version loads with the page
       this.player = window.MeddebListenPlayer ? new window.MeddebListenPlayer() : null;
       this.clipPlayer = window.MeddebClipPlayer ? new window.MeddebClipPlayer() : null;
-      this.speaker = webSpeaker();
       this.pending = new Map(); this.nextId = 1; this.session = null;
       this.model = {loaded: false, loading: null, downloading: false, pct: 0, error: null, threads: 0, ortVersion: ''};
       this.version = {version: 'dev'};
@@ -453,7 +458,9 @@
       if (!document.querySelector('link[rel="manifest"]')) {   // P5.11: installable as an app
         const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.webmanifest'; document.head.appendChild(l);
       }
-      const slow = setTimeout(() => this.notice('Starting Meddeb… (the first visit downloads about 30 MB)', 60000), 1500);
+      this.keepStorage();   // #74: in the background
+      const cached = await bundleCached(self.caches, document.baseURI);
+      const slow = setTimeout(() => this.notice(startText(cached), 60000), 1500);
       const sab = new SharedArrayBuffer((WEB_HDR + 2 * WEB_MAX_FRAMES) * 4);
       const ch = new MessageChannel();
       this.encoder = new Worker(new URL('encoder_worker.js', document.baseURI), {type: 'module'});
@@ -470,6 +477,18 @@
       this.notice('', 0);
       this.watchVersion();
       return this.engineInfo;
+    }
+
+    /** #74 (v0.20): asks the browser to keep Meddeb's storage (the model, the profile, the kept app) instead of
+     *  clearing it under pressure: navigator.storage.persist() is the window's (0.16-0.19 called it in the encoder
+     *  worker, where it does not exist); at the start and at the model's download. */
+    async keepStorage() {
+      const s = typeof navigator !== 'undefined' && navigator.storage;
+      if (!s || !s.persist) return false;
+      try {
+        this.persisted = (s.persisted && await s.persisted()) || await navigator.storage.persist();
+      } catch (e) { /* the browser decides */ }
+      return !!this.persisted;
     }
 
     post(worker, msg, transfer) {
@@ -494,7 +513,16 @@
       }
       if (m.event === 'log') { console.warn('[meddeb]', m.text); return; }
       const s = this.session;
-      if (m.event === 'session' && s) { s._onMessage(m.msg); return; }
+      if (m.event === 'session' && s) {
+        // review of 0.19 (as AndroidEngine): the worker finishes an older session's stop first; its last state and done
+        // must not reach (and close) the session opened meanwhile, which takes nothing before its own `started`
+        if (!s._started) {
+          if (m.msg && m.msg.type === 'started') s._started = true;
+          else if (!m.msg || m.msg.type !== 'status') return;
+        }
+        s._onMessage(m.msg);
+        return;
+      }
       if (m.event === 'closed' && s) { this.session = null; s._onClose(); }
     }
 
@@ -541,6 +569,7 @@
       if (name === 'load') { this.loadModel(); return Object.assign(await this.modelState(), {loading: !this.model.loaded}); }
       if (name === 'android_download_model' || name === 'download_model') {   // the page's ensureModel (D1)
         this.model.downloading = true;
+        this.keepStorage();   // #74: the 132 MB in OPFS
         try { return await this.post(this.encoder, {op: 'download', base: new URL('../models/' + WEB_MODEL + '/', document.baseURI).href}); }
         finally { this.model.downloading = false; }
       }
@@ -555,9 +584,16 @@
         const i = this.engineInfo || {}, m = this.model;
         r.items.push(['Pyodide', i.pyodide || '?'], ['ONNX Runtime Web', m.ortVersion ? `${m.ortVersion} (${m.threads} threads)` : 'not loaded yet'],
           ['Browser', `${this.facts.browser} on ${this.facts.os}${self.crossOriginIsolated ? '' : ' (not isolated)'}`],
-          ['Speech model', `${WEB_MODEL} (${m.loaded ? 'ready' : m.loading ? 'loading' : (await this.modelState()).installed ? 'not loaded' : 'not downloaded'})`]);
+          ['Speech model', `${WEB_MODEL} (${m.loaded ? 'ready' : m.loading ? 'loading' : (await this.modelState()).installed ? 'not loaded' : 'not downloaded'})`],
+          // #74: whether the browser keeps the storage (navigator.storage.persisted())
+          ['Storage', (await this.storageKept()) ? 'kept by the browser (persistent)' : 'the browser may clear it when space runs low']);
       }
       return r;
+    }
+
+    async storageKept() {
+      const s = navigator.storage;
+      try { return !!(s && s.persisted && await s.persisted()); } catch (e) { return false; }
     }
 
     async clip(p) {
@@ -565,9 +601,13 @@
       return new Blob([await this.post(this.worker, {op: 'clip', params: p})], {type: 'audio/wav'});
     }
 
-    async exportProfile() {
+    /** D4.9 (#71, v0.19): the export dialog's sizes (App.export_plan, in the worker). */
+    exportPlan() { return this.call('export_plan'); }
+
+    async exportProfile(kinds) {
       await this.booted;
-      const blob = await profileZip(await this.post(this.worker, {op: 'files'}));
+      // D4.9: the worker lists the files of the kinds ticked (Python's export_files), export.json first
+      const blob = await profileZip(await this.post(this.worker, {op: 'files', kinds: kinds || null}));
       const d = new Date(), z = (n) => String(n).padStart(2, '0');
       const name = `meddeb_profile1_${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}_${z(d.getHours())}-${z(d.getMinutes())}.zip`;
       const a = document.createElement('a');
@@ -580,7 +620,7 @@
     async importProfile(file) {
       await this.booted;
       const r = await this.post(this.worker, {op: 'import', file});
-      return `Profile imported (the previous one is kept in this browser as ${r.backup}).`;
+      return `Profile imported (the previous one is kept in this browser as ${r.backup}).${missingText(r.missing, r.backup, r.partial)}`;
     }
 
     async screenshot() { return null; }
@@ -605,7 +645,11 @@
       await this.booted;
       const w = this.worker;
       const session = {
-        send: (obj) => { if (this.session === session) w.postMessage({op: 'session', msg: obj}); },
+        send: (obj) => {
+          if (this.session !== session) return;
+          if (obj && obj.type === 'start') session._started = false;   // #20: a start over it waits for its `started`
+          w.postMessage({op: 'session', msg: obj});
+        },
         sendAudio: (int16) => {
           if (this.session !== session) return;
           const pcm = new Uint8Array(int16.buffer, int16.byteOffset, int16.byteLength);
@@ -615,6 +659,7 @@
         isOpen: () => this.session === session,
         _onMessage: (m) => onMessage(m, session),
         _onClose: () => onClose(session),
+        _started: false,
       };
       if (this.session) this.session.close();
       this.session = session;
@@ -628,6 +673,7 @@
 
   window.MeddebEngine = {
     create() { return window.MeddebNative ? new AndroidEngine() : onWeb() ? new WorkerEngine() : new HttpEngine(); },
-    _web: {profileZip, crc32, browserFacts},   // tests (tests/test_web_engine.py, Node)
+    // tests (tests/test_web.py, tests/test_issue74_web_cache.py, Node)
+    _web: {profileZip, crc32, browserFacts, missingText, startText, bundleCached},
   };
 })();
