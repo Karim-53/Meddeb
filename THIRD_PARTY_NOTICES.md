@@ -186,9 +186,11 @@ Contents
 - Licence text: none bundled; CC BY-NC 2.5 Canada: https://creativecommons.org/licenses/by-nc/2.5/ca/
   (archived licence page:
   http://web.archive.org/web/20121021062917/http://www.versebyversequran.com/site/license)
-- Notes: credit shown in Listen: "Recitation: Yasser Salamah — audio files: EveryAyah.com" (EveryAyah names the
-  folder "Yaser Salamah"; it is his murattal, his Hadr is the archive.org entry below). The files are not
-  re-hosted; re-hosting them would need the rights holders' permission.
+- Notes: credit shown in Listen until v0.21: "Recitation: Yasser Salamah — audio files: EveryAyah.com" (EveryAyah
+  names the folder "Yaser Salamah"; it is his murattal, his Hadr is the archive.org entry below). Since v0.22 the
+  select's "Yasser Salamah (Hadr)" plays the archive.org entry below and these files only where a surah has no Hadr
+  times or a Hadr file fails, named "Recitation: Yasser Salamah (murattal) — audio files: EveryAyah.com". The files
+  are not re-hosted; re-hosting them would need the rights holders' permission.
 
 ### Recitation by Mishary Alafasy (EveryAyah.com)
 
@@ -255,7 +257,25 @@ Contents
   them). When a file cannot be fetched, the ayah plays from EveryAyah (the entry above).
 - Licence text: none bundled (none published)
 - Notes: credit shown in Listen: "Recitation: Yasser Al-Dossary — audio files: QuranicAudio.com (EveryAyah.com as
-  the fallback)". The files are not re-hosted; re-hosting them would need the rights holders' permission.
+  the fallback)". Since v0.22 (#92) the files of 21 surahs are known to tick too (D4.12): their ticked ayat are
+  never played (the archive.org entry below plays those surahs). The files are not re-hosted; re-hosting them would
+  need the rights holders' permission.
+
+### Recitation by Yasser Al-Dossary (archive.org)
+
+- Version: one MP3 file per surah, 192 kbps (item YASSER_AL-DOSSARI_MP3_QURAN, 114 files, "المصحف المرتل",
+  uploaded in 2010 from mp3quran.net): another murattal recording of his, without the ticks of the files above
+- SPDX: NOASSERTION. The archive.org item is a user upload and states no licence; mp3quran.net states none either.
+- Copyright: recitation by Yasser Al-Dossary; files published by mp3quran.net, uploaded to archive.org
+- Source: https://archive.org/download/YASSER_AL-DOSSARI_MP3_QURAN/SSS.mp3
+- Ships in: not in the APK nor in any Meddeb repository. Listen plays time ranges of these files (Meddeb's own ayah
+  times, recite/data/yasser_clean_timings.json.gz) for the surahs whose QuranicAudio file ticks (D4.12, #92);
+  Android keeps what it fetches in the app's own storage, for the user's own offline listening; PC app and web app:
+  streamed from archive.org directly.
+- Licence text: none bundled (none published)
+- Notes: credit shown in Listen: "his recording on archive.org (mp3quran.net) where QuranicAudio's files tick",
+  after the QuranicAudio credit above. The files are not re-hosted; re-hosting them would need the rights holders'
+  permission.
 
 ### Recitation by Islam Sobhi (mp3quran.net)
 
@@ -272,19 +292,36 @@ Contents
 
 ### Recitation by Yasser Salamah, Hadr (archive.org)
 
-- Version: one MP3 file per surah, 32 kbps; Meddeb plays Taha, Yasin and Ar-Rahman (020L, 036L, 055L), the same
-  recordings as the islamway.net / TVQuran.com files the user named
-- SPDX: NOASSERTION. The archive.org item is a user upload and states no licence.
-- Copyright: recitation by Yasser Salamah (Hadr); files uploaded to archive.org
-- Source: https://archive.org/download/002l_2020qerqqeeeeeeeeeqeewe/ (020L.mp3, 036L.mp3, 055L.mp3)
-- Ships in: not in the APK nor in any Meddeb repository. Listen's "Meddeb selection" plays time ranges of these
-  files (Meddeb's own ayah times, D4.11); Android keeps what it fetches in the app's own storage, for the user's own
-  offline listening; PC app and web app: streamed from archive.org directly. When a file cannot be fetched, the
-  ayah plays from EveryAyah's Yaser_Salamah_128kbps (his murattal, the entry above).
+- Version: one MP3 file per surah, 64 kbps CBR, all 114 surahs (TvQuran.com's copy, item nordarby_20150917_1806,
+  since v0.22); the same recordings as the islamway.net / TVQuran.com files the user named. Until v0.21 Meddeb played
+  Taha, Yasin and Ar-Rahman from a 32 kbps transcode of them,
+  https://archive.org/download/002l_2020qerqqeeeeeeeeeqeewe/ (020L.mp3, 036L.mp3, 055L.mp3)
+- SPDX: NOASSERTION. The archive.org items are user uploads and state no licence.
+- Copyright: recitation by Yasser Salamah (Hadr); files published by TvQuran.com, uploaded to archive.org
+- Source: https://archive.org/download/nordarby_20150917_1806/SSS.mp3
+- Ships in: not in the APK nor in any Meddeb repository. Listen's "Yasser Salamah (Hadr)", Mix and the "Meddeb
+  selection" play time ranges of these files (Meddeb's own ayah times, D4.11); Android keeps what it fetches in the
+  app's own storage, for the user's own offline listening; PC app and web app: streamed from archive.org directly.
+  When a file cannot be fetched, the ayah plays from EveryAyah's Yaser_Salamah_128kbps (his murattal, the entry
+  above).
 - Licence text: none bundled (none published)
-- Notes: credit shown in Listen: "Recitation (Meddeb selection): Yasser Salamah, Hadr (archive.org)", with the
-  selection's other sources. The files are not re-hosted; re-hosting them would need the rights holders'
-  permission.
+- Notes: credit shown in Listen: "Recitation: Yasser Salamah (Hadr) — audio files: archive.org (TvQuran.com)"; in the
+  Meddeb selection "Recitation (Meddeb selection): Yasser Salamah, Hadr (archive.org)", with the selection's other
+  sources. The files are not re-hosted; re-hosting them would need the rights holders' permission.
+
+### Recitation by Yasser Al-Dossary, Al-Fatiha in maqam Kurd (Meddeb's site)
+
+- Version: one MP3 file, 128 kbps, 43.17 s: Al-Fatiha 1:2-1:7 in maqam Kurd, cut by the user from the video "10
+  Maqams Surah Fatiha Sheikh Yasser al Dosari" (268-311 s)
+- SPDX: NOASSERTION. The video states no licence.
+- Copyright: recitation by Yasser Al-Dossary
+- Source: https://karim-53.github.io/Meddeb/audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd.mp3
+- Ships in: the web repository (Meddeb's site, audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd.mp3, published there by the
+  user, #93); not in the APK. Listen's "Meddeb selection" plays time ranges of it (hand-checked ayah cuts in
+  recite/data/selection_timings.json); Android keeps it in the app's own storage once fetched.
+- Licence text: none bundled (none published)
+- Notes: credit shown in Listen: "Recitation (Meddeb selection): Yasser Al-Dossary, maqam Kurd (Meddeb's site)",
+  with the selection's other sources.
 
 ### Word timings of the recitation by Yasser Al-Dossary (yasser_word_timings.json.gz)
 
