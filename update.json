@@ -24,26 +24,26 @@
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html",
  "beta": {
-  "version_code": 22,
-  "version_name": "0.22",
-  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.22/meddeb_v0.22.apk",
-  "size": 46228292,
-  "sha256": "8a5e40a3f0b7fd8c694d7ad32bb65d468bad5422aecaac6467261b5b528e94b2",
+  "version_code": 23,
+  "version_name": "0.23",
+  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.23/meddeb_v0.23.apk",
+  "size": 46340776,
+  "sha256": "dd015bb861d4e5ae53d9895b3000b02fe765ef0be5df2708c5f3ef1fa0f42a3e",
   "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
   "min_sdk": 26,
   "min_version_code": 0,
-  "released": "2026-11-02",
+  "released": "2026-11-05",
   "notes": [
-   "Fix: Listen never plays a recording with ticks: Yasser plays a clean recording, and the few ayat with none stay text only.",
-   "New: Yasser Salamah is now his Hadr for every surah; Meddeb selection's Al-Fatiha is Yasser in maqam Kurd.",
-   "Change: one microphone button: it finds where you are, starts the recitation there, and switches the mic off and on.",
-   "New: the search shows what it heard and lets you tap the right place when the words repeat elsewhere.",
-   "Change: a recitation is saved by itself after 10 minutes without reading, or when you start somewhere else.",
-   "New: Review cards for similar ayah openings: tell apart which ayah comes next.",
-   "Change: a long press on the next-word button gives the rest of the ayah; the separate button is gone.",
-   "New: Settings > Storage deletes old recordings automatically (30 days by default).",
-   "Fix: after choosing a surah, the next word starts at that surah; Listen keeps its own buttons after Review.",
-   "Change: the car's Recite tab: from anywhere, manzil, review, weak page and next to learn."
+   "Change: Listen moved into Recite: the speaker button next to the microphone opens a panel to pick a range and play it.",
+   "Change: a Review card ends by itself once its last word is read, and says when it comes back (in 5 days, in 40 min).",
+   "New: Settings > Review > Cards a day (15 by default); cards now also cover the page you are learning and small gaps.",
+   "New: tap an ayah's number to underline the last words that tell which ayah comes next.",
+   "Change: a long press on a word adds or removes an insertion mark before it, with a short buzz; sliding no longer does.",
+   "New: going back a page lands at its end; a strip shows the next page's first words, and pulling up turns the page.",
+   "Fix: two words said in swapped order are a mistake; Meddeb learns from your corrections to raise fewer false alarms.",
+   "Fix: Yasser's ayat that he joins without a pause now play from his clean recording instead of staying text only.",
+   "Change: \"Manzil\" is now \"Oldest page\"; once you know more than 10 pages, Al-Fatiha's page always counts as today.",
+   "Fix: after an undo the word shows red; Help fits a phone screen; keyboard hints only with a keyboard; a fresh install explains itself."
   ]
  }
 }
