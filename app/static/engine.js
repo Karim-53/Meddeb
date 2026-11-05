@@ -193,8 +193,11 @@
       // service); play resolves {status: 'ended' | 'stopped'} when the clip is over (__meddeb.resolve)
       this.clipPlayer = {
         // X2.18 (2026-10-10): gain = the reciter_clip's (0..1, the ExoPlayer volume); none = unity (ClipSpec.of)
+        // v0.22 review (#92): + surah and ayah: ClipSpec judges a "qaSSS" range (a whole-surah file) by its ayah; without
+        // it AudioBan judged the whole file and refused every clean range of a surah holding any banned ayah
         play: (p) => this.call('clip_play', Object.assign({url: p.url, key: p.key, t0_ms: p.t0_ms,
-          t1_ms: p.t1_ms == null ? null : p.t1_ms}, p.gain == null ? {} : {gain: p.gain})),
+          t1_ms: p.t1_ms == null ? null : p.t1_ms}, p.gain == null ? {} : {gain: p.gain},
+          p.ayah == null ? {} : {surah: p.surah, ayah: p.ayah})),
         stop: () => this.call('clip_stop'),
       };
       window.__meddeb = {
@@ -230,7 +233,8 @@
           }
           if (m.type === 'closed') { this.session = null; s._onClose(); return; }
           s._onMessage(m);
-          if (m.type === 'done') this.session = null;
+          // v0.22 (plan D1/D3): a search from a paused group (keepAfterSearch) that found nothing: the group goes on
+          if (m.type === 'done' && !(m.search && s.keepAfterSearch)) this.session = null;
         },
       };
     }

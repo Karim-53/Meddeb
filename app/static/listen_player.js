@@ -1,5 +1,7 @@
 /* Listen player of the PC / web page (U1.13, plan 2026-10-01 §1.2): engine.player of HttpEngine. Plays a listen_plan
-   (recite/listen.py) clip by clip from the reciter's per-ayah files (D4.5: EveryAyah, streamed, the browser caches them),
+   (recite/listen.py) clip by clip from the reciter's per-ayah files (D4.5: EveryAyah, streamed, the browser caches them;
+   v0.21, D9 / D10: each clip's src, a time range of a whole-surah file such as QuranicAudio's Yasser, its EveryAyah file
+   when that fails; Mix: play k's reciter),
    the whole range `repeat` more times (decision D1: 17 -> 18 plays, 0 -> once), preloading the next clip in a second
    <audio> element, with the browser's Media Session (title, reciter, play / pause / stop / previous / next). Android
    plays natively instead (Media3 PlaybackService, engine.js AndroidEngine.player). The pure pass counting is tested by
@@ -8,8 +10,9 @@
 (function (root) {
   'use strict';
 
-  /** The file of one clip: base_url + "SSSAAA" + ".mp3" (the basmala is 001001). */
-  function clipUrl(reciter, clip) { return reciter.base_url + clip.key + '.mp3'; }
+  /** The file of one clip: base_url + "SSSAAA" + ".mp3" (the basmala is 001001); v0.21 (D9 / D10): its src's url
+   *  (a whole-surah file played from from_ms to to_ms, or a per-ayah file) when the plan has one. */
+  function clipUrl(reciter, clip) { return clip.src && clip.src.url ? clip.src.url : reciter.base_url + clip.key + '.mp3'; }
 
   /** The position after the clip at pos ({index, pass}) has ended: the next clip, the next pass from the first clip,
    *  or ended (the last clip of the last pass stays the position). total = the clips of a pass: a number, or #31 a
@@ -40,6 +43,8 @@
   // next play's ayat during it), the fade-out over 3 s (#89, D15 of v0.20; 1.8 s before) ending on the cut, checked
   // every 50 ms
   const MIN_GAP_MS = 250, FADE_MS = 3000, FADE_TICK_MS = 50;
+  // v0.21: the next ayah of the same surah file goes on without a seek when the file plays within this of its start
+  const SEAMLESS_MS = 500;
 
   class MeddebListenPlayer {
     constructor() {
@@ -57,6 +62,9 @@
       this.opts = {vary: false, gap_s: 0}; this.seed = 0; this.passCache = new Map();
       this.gap = null; this.gapTimer = null; this.fadeTimer = null;
       this.secondMs = 1000; this.minGapMs = MIN_GAP_MS; this.fadeTickMs = FADE_TICK_MS;
+      // v0.21: the surah files that failed in this listening (their clips play the EveryAyah fallback), the Media
+      // Session's artist shown
+      this.badUrls = new Set(); this.artist = null;
     }
 
     _ensure() {
@@ -96,7 +104,7 @@
       const o = opts || {};
       this.opts = {vary: o.vary === true, gap_s: Math.max(0, Math.min(30, parseInt(o.gap_s, 10) || 0))};
       this.seed = o.seed != null ? (+o.seed >>> 0) : (Math.random() * 4294967296) >>> 0;
-      this.passCache = new Map();
+      this.passCache = new Map(); this.badUrls = new Set(); this.artist = null;
       this.pos = {index: 0, pass: 1}; this.retries = 0;
       this._wireMediaSession();
       this._start();
@@ -139,71 +147,137 @@
     _clip() { return this._clips(this.pos.pass)[this.pos.index]; }
 
     /** #31: the clips of a pass: the plan's own (Vary off, pass 1, a plan without margins), else its margins around them
-     *  as the pass shape says (ui_logic.js passShape / passClips: the phone's numbers); drawn once per pass. */
+     *  as the pass shape says (ui_logic.js passShape / passClips: the phone's numbers); drawn once per pass. v0.21
+     *  (Mix, D10): the clips as that play's reciter plays them (passPlan: mix[(pass - 1) % n] as src). */
     _clips(pass) {
       let c = this.passCache.get(pass);
       if (c) return c;
-      const L = this.opts.vary ? logic() : null, p = this.plan;
-      if (!L || !(pass > 1)) c = p.clips;
-      else c = L.passClips(p, L.passShape(this.seed, pass, L.marginSteps(p.margin_before), p.margin_after || []));
+      const L = logic(), p = this.plan;
+      const v = L ? L.passPlan(p, pass) : p;
+      if (!L || !this.opts.vary || !(pass > 1)) c = v.clips;
+      else c = L.passClips(v, L.passShape(this.seed, pass, L.marginSteps(v.margin_before), v.margin_after || []));
       this.passCache.set(pass, c);
       return c;
     }
 
+    /** v0.21 (D9 / D10): where a clip plays from: {url, from (ms in the file, null: its start), to (null: the file's
+     *  end)}: its src's range of a surah file, its EveryAyah fallback once that file failed in this listening, or the
+     *  per-ayah file (a plan of 0.20: reciter.base_url + key). v0.22 (#93, D8): a "local:" src (a file only the phone
+     *  holds) is its fallback at once; null when it has none (the clip is passed). The engine never gives a banned
+     *  fallback (D4.12): a src without one is never replaced by base_url + key. */
+    _where(clip) {
+      const s = clip.src;
+      if (s && typeof s.url === 'string' && s.url.startsWith('local:')) return s.fallback ? {url: s.fallback, from: null, to: null} : null;
+      if (s && s.url && this.badUrls.has(s.url) && s.fallback) return {url: s.fallback, from: null, to: null};
+      if (s && s.url) return {url: s.url, from: s.from_ms != null ? +s.from_ms : null, to: s.to_ms != null ? +s.to_ms : null};
+      return {url: clipUrl(this.plan.reciter, clip), from: null, to: null};
+    }
+
+    /** v0.21: the clip after this one starts where this one ends in the same file, with no pause between (the next
+     *  ayah of a surah file): the file plays on. */
+    _continues(w) {
+      const nxt = advance(this.pos, this._total(), this.passes);
+      if (nxt.ended || (nxt.pass !== this.pos.pass && this._gapMs() > 0)) return false;
+      const n = this._where(this._clips(nxt.pass)[nxt.index]);
+      return !!n && n.url === w.url && n.from != null && n.from === w.to;
+    }
+
     _total() { return (pass) => this._clips(pass).length; }
 
-    _start() {
+    _start(follow) {
       this._cancelRetry(); this._stopFade(); this.attempt++;
-      const clip = this._clip(), url = clipUrl(this.plan.reciter, clip);
-      const other = 1 - this.cur;
+      const clip = this._clip(), w = this._where(clip);
+      if (!w) { this._next(); return; }            // v0.22: nothing this player may play (a local: src without fallback)
+      const url = w.url, at = (w.from || 0) / 1000;
+      const other = 1 - this.cur, cur = this.els[this.cur];
+      // v0.21: the next ayah of the surah file playing, right where the file is: it plays on (no seek, no reload);
+      // v0.22 (#104): when the file played on into it (follow), anywhere inside its range (a late check), not only
+      // within SEAMLESS_MS of its start
+      const ct = (+cur.currentTime || 0) * 1000;
+      const seamless = w.from != null && cur.dataset.url === url && !cur.error && !cur.paused &&
+        (Math.abs(ct - w.from) < SEAMLESS_MS || (follow === true && ct >= w.from && (w.to == null || ct < w.to)));
       // #75: the other element holds this clip (preloaded): it plays whatever its readyState (play() waits for the data
       // itself; v0.19 loaded the file again below readyState 2, the gap between two ayat on the web)
-      const preloaded = this.els[other].dataset.url === url && !this.els[other].error;
+      const preloaded = !seamless && this.els[other].dataset.url === url && !this.els[other].error;
       if (preloaded) this.cur = other;
       // the element left behind is silenced: _preloadNext does not always give it a new file (the last clip, or it already
       // holds the one after: previous / next on a 2-clip plan), and two recitations must never play over each other
       try { this.els[1 - this.cur].pause(); } catch (e) { /* not playing */ }
       for (const e of this.els) e.volume = 1;   // #31: after a fade-out
       const a = this.els[this.cur];
-      // #75: no seek on a file already at its start (a seek makes the browser wait for data again)
-      if (a.dataset.url !== url || a.error) { a.dataset.url = url; a.src = url; } else if (+a.currentTime) a.currentTime = 0;
+      // #75: no seek on a file already at its start (a seek makes the browser wait for data again); v0.21: a range starts
+      // at from_ms (set right after src: the browser applies it once the file's header is in)
+      if (a.dataset.url !== url || a.error) { a.dataset.url = url; a.src = url; if (at) a.currentTime = at; }
+      else if (!seamless && (+a.currentTime || 0) !== at) a.currentTime = at;
+      this._artist(clip);
       // #75: play() first, before the page hears of it (its redraw used to delay the next ayah); a preloaded clip that
       // follows a playing one says nothing until its 'playing' event, anything else says 'loading' (unless play() already
-      // failed: its state stays)
+      // failed: its state stays); v0.21: a seamless one is playing already
       const before = this.status;
-      this._playCurrent();
-      this._preloadNext();
-      if ((!preloaded || before !== 'playing') && this.status === before) this._set('loading');
-      if (clip.fade_ms != null) this._watchFade(a, +clip.fade_ms);
+      if (seamless) { this._preloadNext(); this._set('playing'); }
+      else {
+        this._playCurrent();
+        this._preloadNext();
+        if ((!preloaded || before !== 'playing') && this.status === before) this._set('loading');
+      }
+      if (clip.fade_ms != null || w.to != null) this._watchEnd(a, clip.fade_ms != null ? +clip.fade_ms : null, w);
     }
 
-    /** #31: the last extra ayah of a varied play fades out and stops on its cut (a word start in its middle), leaving
-     *  the rest to the listener's memory; then the next play (after the pause) or the end. #89 (D15, v0.20): over 3 s,
-     *  the ramp capped at the cut (a cut 2 s into the ayah fades from its start). */
-    _watchFade(a, endMs) {
-      const L = logic();
+    /** #31: the last extra ayah of a varied play fades out and stops on its cut (a word start in its middle, ms from
+     *  the clip's start), leaving the rest to the listener's memory; then the next play (after the pause) or the end.
+     *  #89 (D15, v0.20): over 3 s, the ramp capped at the cut (a cut 2 s into the ayah fades from its start). v0.21
+     *  (D9): a range ends at to_ms the same way, without the fade: the file stops there, or plays on into the next
+     *  clip when that one starts right there (_continues). */
+    _watchEnd(a, fadeMs, w) {
+      const L = logic(), from = w.from || 0, endMs = fadeMs != null ? fadeMs : w.to - from;
       this.fadeTimer = setInterval(() => {
         if (!this.plan || this.els[this.cur] !== a || this.gap) { this._stopFade(); return; }
         // #31 review: a pause (the user's, the Media Session's, the system's whose event is still on its way) holds the
         // fade: no cut and no next play behind it; it goes on after the resume
         if (a.paused || !['playing', 'loading'].includes(this.status)) return;
-        const t = (+a.currentTime || 0) * 1000;
-        if (t < endMs) { a.volume = L ? L.fadeVolume(t, endMs, Math.min(FADE_MS, endMs)) : 1; return; }
+        const t = (+a.currentTime || 0) * 1000 - from;
+        if (t < endMs) { if (fadeMs != null) a.volume = L ? L.fadeVolume(t, endMs, Math.min(FADE_MS, endMs)) : 1; return; }
         this._stopFade();
-        a.dataset.cut = '1';   // our own pause: the 'pause' listener does not report it
-        try { a.pause(); } catch (e) { /* not playing */ }
+        // v0.22 (#104): a late check (a busy or throttled page) finds the file already past the next ayat too: the
+        // position follows the file over them, never a seek back into audio already heard
+        let cw = w;
+        if (fadeMs == null) {
+          const ct = (+a.currentTime || 0) * 1000;
+          while (this._continues(cw)) {
+            const nxt = advance(this.pos, this._total(), this.passes), n = this._where(this._clips(nxt.pass)[nxt.index]);
+            if (n.to == null || ct < n.to) break;
+            this.pos = {index: nxt.index, pass: nxt.pass}; cw = n;
+          }
+        }
+        const on = fadeMs == null && this._continues(cw);
+        if (!on) {
+          a.dataset.cut = '1';   // our own pause: the 'pause' listener does not report it
+          try { a.pause(); } catch (e) { /* not playing */ }
+        }
         a.volume = 1;
-        this._next();
+        this._next(false, on);
       }, this.fadeTickMs);
+    }
+
+    /** v0.21 (D10): the Media Session's artist is the reciter of the clip playing (Mix, the Meddeb selection). */
+    _artist(clip) {
+      const name = (clip.src && clip.src.name) || (this.plan.reciter || {}).name || '';
+      if (name === this.artist) return;
+      this.artist = name;
+      const ms = typeof navigator !== 'undefined' && navigator.mediaSession;
+      try {
+        if (ms && typeof MediaMetadata !== 'undefined') ms.metadata = new MediaMetadata({title: this.plan.title || 'Meddeb', artist: name, album: 'Meddeb'});
+      } catch (e) { /* no metadata support */ }
     }
 
     _stopFade() { clearInterval(this.fadeTimer); this.fadeTimer = null; }
 
     _playCurrent() {
-      const a = this.els[this.cur];
+      const a = this.els[this.cur], n = this.attempt;
       let p;
       try { p = a.play(); } catch (e) { this._blocked(e); return; }
-      if (p && p.catch) p.catch((e) => { if (e && e.name === 'AbortError') return; this._blocked(e); });
+      // v0.21: a rejection of an older load (the surah file's, after its fallback started) is not this load's failure
+      if (p && p.catch) p.catch((e) => { if ((e && e.name === 'AbortError') || n !== this.attempt) return; this._blocked(e); });
     }
 
     _blocked(e) {
@@ -214,20 +288,24 @@
     _preloadNext() {
       const nxt = advance(this.pos, this._total(), this.passes);
       if (nxt.ended) return;
-      const url = clipUrl(this.plan.reciter, this._clips(nxt.pass)[nxt.index]);
-      const b = this.els[1 - this.cur];
-      if (b.dataset.url === url || url === this.els[this.cur].dataset.url) return;
-      b.dataset.url = url; b.src = url; try { b.load(); } catch (e) { /* preloading is optional */ }
+      const w = this._where(this._clips(nxt.pass)[nxt.index]);
+      if (!w) return;
+      const url = w.url, b = this.els[1 - this.cur];
+      if (b.dataset.url === url || url === this.els[this.cur].dataset.url) return;   // v0.21: the same surah file plays on
+      b.dataset.url = url; b.src = url;
+      try { b.load(); } catch (e) { /* preloading is optional */ }
+      if (w.from) b.currentTime = w.from / 1000;   // after load(), which resets the start position to 0
     }
 
-    /** The clip after this one; #31: a new play waits out the pause between plays first (skipGap: ⏭ goes on at once). */
-    _next(skipGap) {
+    /** The clip after this one; #31: a new play waits out the pause between plays first (skipGap: ⏭ goes on at once).
+     *  v0.22 (#104): follow = the surah file plays on into it (_watchEnd): _start keeps it playing where it is. */
+    _next(skipGap, follow) {
       const nxt = advance(this.pos, this._total(), this.passes);
       if (nxt.ended) { this._set('ended'); return; }
       const gapMs = nxt.pass !== this.pos.pass && !skipGap ? this._gapMs() : 0;
       if (gapMs > 0) { this._enterGap(nxt.pass, gapMs); return; }
       this.pos = {index: nxt.index, pass: nxt.pass};
-      this._start();
+      this._start(follow);
     }
 
     _skip(dir) {
@@ -268,6 +346,14 @@
     _failed() {
       if (this.failedAttempt === this.attempt) return;   // the same failed load, reported a second time
       this.failedAttempt = this.attempt;
+      // v0.21 (D9): a surah file that fails: its clips play their EveryAyah files for the rest of this listening
+      const c = this.plan ? this._clip() : null, s = c && c.src;
+      // (at once, but after this failure's other report: the load's 'error' and its rejected play() come together)
+      if (s && s.url && s.fallback && !this.badUrls.has(s.url)) {
+        this.badUrls.add(s.url); this.els[this.cur].dataset.url = '';
+        this.retryTimer = setTimeout(() => { this.retryTimer = null; if (this.plan) this._start(); }, 0);
+        return;
+      }
       if (this.retries < RETRIES) {
         this.retries++;
         const a = this.els[this.cur]; a.dataset.url = '';
@@ -313,6 +399,7 @@
       const clip = clips && !gap ? clips[this.pos.index] : null;
       return {status: this.status, title: p ? p.title : null, label: gap ? 'Pause' : clip ? clip.label : null,
         key: clip ? clip.key : null, surah: clip ? clip.surah : null, ayah: clip ? clip.ayah : null,
+        ayah_to: clip ? (clip.ayah_to || clip.ayah) : null,     // #92 (v0.23, D17): a unit clip's last ayah
         page: clip ? clip.page : null, index: p ? this.pos.index : null, total: clips ? clips.length : null,
         pass: p ? this.pos.pass : null, passes: p ? this.passes : null, downloaded: null, to_download: null,
         message: this.status === 'error' ? this.message : null, source: 'listen', ...(gap ? {kind: 'gap'} : {})};
@@ -325,6 +412,32 @@
      ayat at most are kept (a 55 s ayah is ~19 MB of samples). Android plays natively (ClipPlayer.kt, engine.js). */
   const CLIP_FADE_S = 0.02;   // 20 ms in and out: no click at a cut inside the recitation
   const CLIP_CACHE = 2;
+  const RANGE_PAD_S = 0.5;    // v0.22 review: a range of a whole-surah file is fetched with this much audio around it
+
+  /* v0.22 review (#92, D7): app.off_banned's clips of a banned ayah play a range of a whole-surah file (key "qaSSS":
+     QuranicAudio's, ~116 MB for Al-Baqarah, or Yasser's clean recording): fetched whole and decoded (~2.5 GB of
+     samples) the cue took minutes or failed. Those files are constant-bitrate MP3s (as RangeAudio.Mp3Cbr reads them on
+     Android): the first frame's header gives the bitrate, after the ID3 tag and a LAME Info / Xing frame, and only the
+     bytes of [t0 - pad, t1 + pad] are fetched (an HTTP Range) and decoded. -> {start, bps} (bytes of audio at 0 s, bytes
+     a second); null: not an MP3 this can read. */
+  const MP3_KBPS = [[0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320],
+                    [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160]];
+  const MP3_RATES = {3: [44100, 48000, 32000], 2: [22050, 24000, 16000], 0: [11025, 12000, 8000]};
+  function mp3Layout(b) {
+    let i = 0;
+    if (b.length >= 10 && b[0] === 0x49 && b[1] === 0x44 && b[2] === 0x33)   // "ID3": its size is syncsafe
+      i = 10 + ((b[6] & 0x7f) << 21 | (b[7] & 0x7f) << 14 | (b[8] & 0x7f) << 7 | (b[9] & 0x7f)) + (b[5] & 0x10 ? 10 : 0);
+    for (; i + 4 <= b.length; i++) {
+      if (b[i] !== 0xff || (b[i + 1] & 0xe0) !== 0xe0) continue;
+      const ver = (b[i + 1] >> 3) & 3, layer = (b[i + 1] >> 1) & 3, bi = b[i + 2] >> 4, si = (b[i + 2] >> 2) & 3;
+      if (ver === 1 || layer !== 1 || bi === 0 || bi === 15 || si === 3) continue;   // Layer III, a real bitrate only
+      const kbps = MP3_KBPS[ver === 3 ? 0 : 1][bi], sr = MP3_RATES[ver][si], pad = (b[i + 2] >> 1) & 1;
+      const len = Math.floor((ver === 3 ? 144 : 72) * kbps * 1000 / sr) + pad;
+      const tag = String.fromCharCode(...b.slice(i + 4, Math.min(b.length, i + 64)));
+      return {start: i + (/Xing|Info/.test(tag) ? len : 0), bps: kbps * 125};
+    }
+    return null;
+  }
 
   class MeddebClipPlayer {
     constructor() {
@@ -364,6 +477,36 @@
       return p;
     }
 
+    /** v0.22 review: [t0 - RANGE_PAD_S, t1 + RANGE_PAD_S] of a constant-bitrate surah file (mp3Layout), fetched with
+     *  a Range and decoded alone (kept as the ayah files are, by url and range) -> {buf, off: the second it starts at
+     *  in the file}. A server that sends the whole file anyway is refused: never a whole surah decoded for a clip. */
+    async _rangeDecoded(ctx, spec) {
+      const url = spec.url, t0 = Math.max(0, (+spec.t0_ms || 0) / 1000), t1 = Math.max(t0, +spec.t1_ms / 1000);
+      const part = async (a, z) => {
+        const resp = await fetch(url, {headers: {Range: `bytes=${a}-${z}`}});
+        if (resp.status !== 206) throw new Error(`cannot download a part of ${spec.key}.mp3 (${resp.status})`);
+        return resp.arrayBuffer();
+      };
+      const lay = mp3Layout(new Uint8Array(await part(0, 16383)));
+      if (!lay) throw new Error(`cannot read ${spec.key}.mp3`);
+      const off = Math.max(0, Math.floor(t0 - RANGE_PAD_S));
+      const a = lay.start + Math.floor(off * lay.bps), z = lay.start + Math.ceil((t1 + RANGE_PAD_S) * lay.bps);
+      const key = `${url}#${a}-${z}`;
+      let p = this.cache.get(key);
+      if (p) { this.cache.delete(key); this.cache.set(key, p); return {buf: await p, off}; }
+      p = (async () => {
+        const data = await part(a, z);
+        return await new Promise((ok, fail) => {
+          const r = ctx.decodeAudioData(data, ok, fail);
+          if (r && r.catch) r.catch(() => {});
+        });
+      })();
+      this.cache.set(key, p);
+      p.catch(() => { if (this.cache.get(key) === p) this.cache.delete(key); });
+      while (this.cache.size > CLIP_CACHE) this.cache.delete(this.cache.keys().next().value);
+      return {buf: await p, off};
+    }
+
     /** Plays {url, key, t0_ms, t1_ms (null = to the end of the file), gain (X2.18 one loudness, 2026-10-10: reciter_clip's
      *  0.646; clamped to 0..1, missing = 1)}; resolves {status: 'ended' | 'stopped'} (stopped by stop() or by the next
      *  play), rejects when the file cannot be downloaded or decoded. */
@@ -379,10 +522,11 @@
         if (ctx.state === 'suspended') throw new Error('the browser does not allow the sound yet (press a button once)');
       }
       const key = spec.key || String(spec.url);
-      const buf = await this._decoded(ctx, key, spec.url);
+      const ranged = /^qa\d{3}$/.test(key) && spec.t1_ms != null;   // v0.22 review: a range of a whole-surah file
+      const {buf, off} = ranged ? await this._rangeDecoded(ctx, spec) : {buf: await this._decoded(ctx, key, spec.url), off: 0};
       if (seq !== this.seq) return {status: 'stopped'};
-      const t0 = Math.max(0, Math.min((+spec.t0_ms || 0) / 1000, buf.duration));
-      const t1 = spec.t1_ms == null ? buf.duration : Math.max(t0, Math.min(+spec.t1_ms / 1000, buf.duration));
+      const t0 = Math.max(0, Math.min((+spec.t0_ms || 0) / 1000 - off, buf.duration));
+      const t1 = spec.t1_ms == null ? buf.duration : Math.max(t0, Math.min(+spec.t1_ms / 1000 - off, buf.duration));
       const dur = Math.max(0.02, t1 - t0), fade = Math.min(CLIP_FADE_S, dur / 2), now = ctx.currentTime;
       const lv = spec.gain == null || !Number.isFinite(+spec.gain) ? 1 : Math.max(0, Math.min(1, +spec.gain));
       const src = ctx.createBufferSource(), g = ctx.createGain();

@@ -41,7 +41,8 @@
 
   // #67: what a label of the user's adds to a word's state, the page's own (never sent): auto (the session's own state
   // under his first label, the tracker's `auto`), via ('mark': the label is a double tap's own event after ■, undone by
-  // `undo`), unshow (a bar of Hidden / Blind before the label: a bar again once undone), prev / prevH (the state and the
+  // `undo`), unshow (a word not on screen before the label: hidden again once undone to "not recited yet"; #119, v0.23:
+  // a red bar's word stays on screen, red), prev / prevH (the state and the
   // history before a double tap's own event, drawn back by its undo), viaGap (#72: that own event was a double tap in
   // the gap before the word: only another one there undoes it). = recite/app.py _LABEL_KEYS
   const LABEL_KEYS = ['auto', 'via', 'unshow', 'prev', 'prevH', 'viaGap'];
@@ -240,14 +241,15 @@
    *  summary to draw; after / none), toast}. act:
    *  - live: {kind: 'mark', status: 'wrong' | 'ok', unhint?: true} (S00 / S00* -> S01 / S01*, S11 -> S10, S11* -> S10*;
    *    S01* -> S00*: mark ok, his own reading again) or {kind: 'unmark'} (S01 / S10 / S10* back: Meddeb's verdict,
-   *    the hint too, the engine's tracker restores them; the page draws `auto` at once);
+   *    the hint too, the engine's tracker restores them; the page draws `auto` at once); a word not recited yet:
+   *    `mark wrong` (v0.22, #101 D2; in its gap, since 0.21, #72 D7: an insertion, `mark wrong ins`);
    *  - after / none: {kind: 'event', event}: 'mistake' (-> S01 / S01*), 'remove' (S11 -> S10; and S01* of a session
    *    saved before v0.18), 'undo' (a double tap's own mark undone, S01* of #34), 'unmark' (a label of the user's on
    *    that session: its own verdict back, Profile.add_mark);
    *  - {kind: 'draw'}: a session too short to be saved: nothing saved, the page draws Meddeb's verdict (S10 / S01 /
    *    S10* back), S11 -> S10 and S01* -> S00* (page review 2026-10-29, F5: never `remove`, which acted on an older
    *    session's reading);
-   *  - null: a word not recited yet in the running session, the session still being saved, or (v0.12 review) a red
+   *  - null: the session still being saved, or (v0.12 review) a red
    *    word of a session on screen whose newest reading is correct (Remove would act on that newer reading).
    *  #72 (v0.19, X2.12b; user, 2026-10-29: "if I double clic manually between words i do that"): o.ins = a double tap
    *  in the gap before the word. There a word that is no mistake becomes an insertion (`mark wrong ins` / `mistake
@@ -260,8 +262,26 @@
     const thr = o.threshold, st = o.st || {status: 'pending', score: 0}, h = o.history == null ? null : o.history;
     const pending = !st.status || st.status === 'pending';
     const live = o.where === 'live', gap = !!o.ins;
-    if (live && pending) return {from: 'pending', to: 'pending', act: null, toast: null};
     const again = ': double tap again to undo';
+    if (live && pending) {
+      // v0.22 (#101 D2; user, 2026-11-02: "I am ok with the proposal do them all", P2: one meaning per gesture): the
+      // word's own double tap toggles a mistake there too (it opened the popover): `mark wrong` over Meddeb's "not
+      // recited yet" (auto), whose next double tap is labelState's S01 -> unmark, "not recited" back
+      if (!gap) {
+        const next = Object.assign(plainState(st), {status: 'wrong', score: 1, user: true,
+          auto: {status: 'pending', score: 0, hyp: null}});
+        return {from: 'pending', to: labelState(next, thr, true), act: {kind: 'mark', status: 'wrong'}, st: next,
+          toast: DT_TOAST.S00 + again};
+      }
+      // #72 (v0.21, D7; user, 2026-11-01: "in silent blind i don't think i can insert a new one"): the gap (its double
+      // tap, the drag, the ⚡'s double tap) before a word not recited yet, e.g. a word kept on screen at a silent
+      // start: an insertion (`mark wrong ins`, as the popover's + Inserted before: Meddeb's "not recited yet" under
+      // it, auto), the gap's own mark, so that the next one there gives "not recited" back (unmark)
+      const next = Object.assign(plainState(st), {status: 'wrong', score: 1, user: true, ins: true,
+        auto: {status: 'pending', score: 0, hyp: null}, prev: plainState(st), viaGap: true});
+      return {from: 'pending', to: labelState(next, thr, true), act: {kind: 'mark', status: 'wrong', ins: true}, st: next,
+        toast: 'Marked as an insertion' + again};
+    }
     const toast = (from, back) => (back ? 'Undone' : (gap ? 'Insertion removed' : DT_TOAST[from]) + again);
     if (o.where !== 'after' && !live || pending) {
       let from = historyState(h, o.since), back = !DT_FORWARD[from];
@@ -407,6 +427,180 @@
     return from;
   }
 
+  /** #94 (Meddeb 0.19, 2026-10-31, D1): where the session that goes on from Find where I am starts, {surah, ayah, page}:
+   *  the found place's first heard word (found.start, on its own page), no longer found.next (the word after the >= 4
+   *  words the search needed: a short ayah was used up); the engine hands that session the audio from that word on
+   *  (#20). An engine before 0.21 (no start): found.next on found.page. */
+  function searchStart(f) {
+    const s = f.start || {surah: f.next.surah, ayah: f.next.ayah, page: f.page};
+    return {surah: +s.surah, ayah: +s.ayah, page: +s.page};
+  }
+
+  /** v0.21 review 2 (#94): the Found toast names the place the session starts at and the page it loads (searchStart):
+   *  found's own ayah and found.page (found.next's page) said "page 77" over page 76 after a find that crossed a page. */
+  function foundText(f) {
+    const at = searchStart(f);
+    return `Found: ${at.surah}:${at.ayah}, page ${at.page}. Go on reciting…`;
+  }
+
+  /** v0.22 (#101 P1/P3, #102, plan D1/D3; user, 2026-11-01: "button mic will be kept. button mic search will be deleted.
+   *  but the button mic kept will behave like the button mic search"): what a press of the one microphone does.
+   *  o = {starting, searching, running, paused, onGroupPage (the shown page holds the open group's next words), card (a
+   *  review card's live session: a specific recite, D4), car (the car's session followed here)} -> 'none' (a start is
+   *  under way), 'stop_search' (the microphone off: the search ends, nothing found), 'pause' (listening: the microphone
+   *  off, the group stays open), 'resume' (paused on the group's own page, a card, the car: no search), 'search' (idle,
+   *  or paused on another page: find the place first, the shown page as the prior; a find in the group's next words
+   *  goes on in it, elsewhere it closes the group). */
+  function micPressAction(o) {
+    o = o || {};
+    if (o.searching) return 'stop_search';
+    if (o.starting) return 'none';
+    if (o.running && !o.paused) return 'pause';
+    if (o.running) return o.onGroupPage || o.card || o.car ? 'resume' : 'search';
+    return 'search';
+  }
+
+  /** v0.22 (#101 P1/P3, #102, plan D1/D3): the one microphone's tooltips (no ■, no search button in Recite). */
+  const MIC_TITLE = 'Recite (S): the microphone listens, Meddeb finds where you are (the page shown first) and follows';
+  const MIC_OFF_TITLE = 'Microphone off (S / P): your reading stays open; it is saved after 10 minutes without recitation or when you start elsewhere';
+  const SEARCH_OFF_TITLE = 'Microphone off (S): stop looking for the place';
+
+  /** #101 (v0.23, D2; user, 2026-11-04: "button symbols are still difficult to understand … the pause mic button is the
+   *  same as pause listening button, it is very confusing"): the microphone button's drawing, one glyph = one meaning:
+   *  never ▶ / ❚❚ / ■ (they belong beside a speaker: Listen, Review's segment). o = {searching, running, paused,
+   *  modelBusy} -> {icon: 'micFind' (it listens to find the place; a press = off) | 'micOn' (on air: it listens; a press
+   *  = off) | 'wait' (a press loads the speech model) | 'mic' (off, idle or paused: a press listens), title, on (the
+   *  on-air ring, #start.on)}. */
+  function micButton(o) {
+    o = o || {};
+    if (o.searching) return {icon: 'micFind', title: SEARCH_OFF_TITLE, on: true};
+    if (o.running && !o.paused) return {icon: 'micOn', title: MIC_OFF_TITLE, on: true};
+    if (o.modelBusy && !o.running) return {icon: 'wait', title: 'Loading the speech model…', on: false};
+    return {icon: 'mic', title: MIC_TITLE, on: false};
+  }
+
+  // ---------------------------------------------------------------- #110 (v0.23, D1) the keyboard's hints
+  /** #110 (v0.23, D1; user, 2026-11-04: "no need to show the (P) in the pop up, better show the symbol of the button"):
+   *  is a keyboard likely? o = {kind (engine.kind: 'http' the PC app, 'android', 'web'), finePointer ((hover: hover)
+   *  and (pointer: fine)), keySeen (a real shortcut key was pressed: a tablet's keyboard)}. The PC app: yes; Android:
+   *  only once a key was seen; the web (and anything else): a mouse-like pointer, or a key seen. */
+  function keysLikely(o) {
+    o = o || {};
+    if (o.keySeen) return true;
+    if (o.kind === 'http') return true;
+    if (o.kind === 'android') return false;
+    return !!o.finePointer;
+  }
+
+  /** D1: a keydown that proves a keyboard: a shortcut letter (S F P V N A R H) or an arrow, without a modifier. Esc
+   *  proves nothing (a phone's Back may send it), nor a soft keyboard's 'Unidentified'. ev = {key, ctrlKey, metaKey,
+   *  altKey}. */
+  function shortcutKey(ev) {
+    if (!ev || ev.ctrlKey || ev.metaKey || ev.altKey) return false;
+    return /^(?:[sfpvnarh]|Arrow(?:Left|Right|Up|Down))$/i.test(String(ev.key || ''));
+  }
+
+  const KEY_NAME = String.raw`(?:[A-Z]|Esc|[←→↑↓])`;
+  const KEY_PARENS = new RegExp(String.raw`\s?\(${KEY_NAME}(?:\s*/\s*${KEY_NAME})*\)`, 'g');
+  const KEY_LEAD = new RegExp(String.raw`\(${KEY_NAME}; `, 'g'), KEY_TAIL = new RegExp(String.raw`, ${KEY_NAME}\)`, 'g');
+  /** D1: a title or a message without its keyboard hints, where no keyboard is likely: "(P)", "(S / P)", "(V)", "(Esc)",
+   *  "(↓)" go with the space before them; "(N; long press: the rest of the ayah, A)" keeps "(long press: the rest of the
+   *  ayah)"; "or ← next / → previous" goes. The rest of the text stays as it was. */
+  function dropKeyHints(text) {
+    return String(text == null ? '' : text).replace(KEY_PARENS, '').replace(KEY_LEAD, '(').replace(KEY_TAIL, ')')
+      .replace(/,? or ← next \/ → previous/g, '');
+  }
+
+  /** D1: a message may name a bar button by its own symbol: {mic}, {micOn}, {next} … (keys of the page's ICON table,
+   *  `icons`) -> the parts to draw in order, [{text} | {icon}]; an unknown token (or a brace that is none) stays text. */
+  function iconTokens(text, icons) {
+    const s = String(text == null ? '' : text), out = [];
+    const known = (k) => !!icons && Object.prototype.hasOwnProperty.call(icons, k) && typeof icons[k] === 'string';
+    let last = 0;
+    for (const m of s.matchAll(/\{([A-Za-z]\w*)\}/g)) {
+      if (!known(m[1])) continue;
+      if (m.index > last) out.push({text: s.slice(last, m.index)});
+      out.push({icon: m[1]});
+      last = m.index + m[0].length;
+    }
+    if (last < s.length) out.push({text: s.slice(last)});
+    return out;
+  }
+
+  /** D1: the toast's HTML for a message: its text escaped, each icon token drawn as <span class="ic">SVG</span>. */
+  function iconHtml(text, icons) {
+    const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return iconTokens(text, icons).map(p => p.icon ? `<span class="ic">${icons[p.icon]}</span>` : esc(p.text)).join('');
+  }
+
+  const SEARCH_PLACES_MAX = 6;   // the engine's candidates (search.py); above, 5 chips and "keep reciting"
+  /** #100 (user, 2026-11-01: "show what you heard as raw text and a number of mutashabihat you hesitate between them. if
+   *  i stop here then i can choose manually where to continue. if i keep reciting until there is only one possibility …
+   *  then jump to it like you do right now"): the search message m (B3.8: raw, hyp, found, candidates, n_places) -> the
+   *  panel over the bar {heard (the model's raw text, else the normalized hyp; '' once found), title (what to do), places:
+   *  [{global (choose{global}), label 'Al-Falaq 113:1 · p. 604' (where the session would start), text (Uthmani), page}]};
+   *  no places for fewer than 2, nor once found. names = {surah id: English name}. */
+  function searchPlacesView(m, names) {
+    m = m || {};
+    if (m.found) return {heard: '', title: '', places: []};
+    const heard = String(m.raw || m.hyp || '').trim();
+    const cands = Array.isArray(m.candidates) ? m.candidates.filter(c => c && c.global != null) : [];
+    const n = Math.max(cands.length, Math.round(+m.n_places) || 0);
+    if (n < 2 || !cands.length) return {heard, title: '', places: []};
+    const many = n > SEARCH_PLACES_MAX;
+    const places = (many ? cands.slice(0, SEARCH_PLACES_MAX - 1) : cands).map(c => {
+      const s = c.start || c, name = (names && names[+s.surah]) || 'Surah';
+      return {global: +c.global, label: `${name} ${+s.surah}:${+s.ayah} · p. ${+(s.page || c.page)}`,
+        text: String(c.text || ''), page: +(s.page || c.page)};
+    });
+    return {heard, title: many ? `${n} places: keep reciting (or tap one)` : `${n} places: tap where you are, or keep reciting`,
+      places};
+  }
+
+  /** X2.13: the search gives up after 60 s heard without a place, unless places are offered (#100: the reciter may be
+   *  reading them; 120 s at most). m = the search message. */
+  function searchGivesUp(m) {
+    m = m || {};
+    if (m.found) return false;
+    const n = Array.isArray(m.candidates) ? m.candidates.length : 0;
+    return (+m.heard_s || 0) > (n ? 120 : 60);
+  }
+
+  /** v0.22 (#101 P1, plan D1, decision 5: "a toast only"): a group the engine closed (done{auto, ended_by, mic_off}, or a
+   *  `done` in started.closed) -> "Saved · 3 mistakes" (+ why, when it closed for 10 minutes without recitation; the ✗
+   *  long press still opens its summary). */
+  function groupDoneText(m) {
+    m = m || {};
+    if (!m.folder) return 'Too short to be saved';
+    const n = Array.isArray(m.mistakes) ? m.mistakes.length : Math.max(0, Math.round(+m.n_mistakes) || 0);
+    const idle = m.ended_by === 'idle' ? ` (10 minutes without recitation${m.mic_off ? ': the microphone is off' : ''})` : '';
+    return `Saved · ${n ? `${n} mistake${n === 1 ? '' : 's'}` : 'no mistake'}${idle}`;
+  }
+
+  /** v0.22 (#101 P5, plan D4): a card whose range was read cleanly in any group (review_result without a folder:
+   *  range_result) -> "Card 26:73-76 ✓". */
+  function cardPassText(card) {
+    const c = card || {}, t = Array.isArray(c.target) ? c.target.map(Number) : [];
+    const span = t[1] > t[0] ? `${t[0]}-${t[1]}` : `${t[0]}`;
+    return `Card ${+c.surah}:${span} ✓`;
+  }
+
+  /** v0.22 review 2 (D1 decision 5, D4): the cards one group passed, one toast: "Card 26:73-76 ✓", "Cards 26:73-76 ✓ ·
+   *  26:80 ✓"; '' for none. */
+  function cardsPassText(cards) {
+    const cs = Array.isArray(cards) ? cards : [];
+    if (cs.length < 2) return cs.length ? cardPassText(cs[0]) : '';
+    return 'Cards ' + cs.map(c => cardPassText(c).slice('Card '.length)).join(' · ');
+  }
+
+  /** #71 (v0.22, plan D9; user, 2026-11-02: "delete old recordings automatically [never, 1day, 3 days, 7 days, 30 days]
+   *  default 30 days"): settings.recordings_keep_days -> 0 (never), 1, 3, 7 or 30; missing or unknown: 30. */
+  const RECORDINGS_KEEP = [0, 1, 3, 7, 30];
+  function recordingsKeepDays(v) {
+    const n = v == null || v === '' ? NaN : Number(v);
+    return RECORDINGS_KEEP.includes(n) ? n : 30;
+  }
+
   // ---------------------------------------------------------------- U1.1c the mushaf's gestures
   /** A horizontal swipe on the mushaf (right to left book): finger to the right = next page, to the left = previous. */
   function swipePage(dx, dy, minPx) {
@@ -425,6 +619,61 @@
   /** #40: the pull up that puts the starter hint away (the same thresholds, upwards, wherever the mushaf is scrolled). */
   function pullUp(dx, dy, minPx) {
     return -dy >= (minPx || 60) && Math.abs(+dy) >= 1.5 * Math.abs(+dx);
+  }
+
+  /** #108 (v0.23, D11; user, 2026-11-02: page switching is not intuitive: scroll to the bottom, think of swiping, a swipe
+   *  back lands at the top of the page and one must scroll down again): a pull up past the end of the page turns it.
+   *  The finger came down with the mushaf at its end (top >= maxTop - 2: its scrollTop and its largest scrollTop when
+   *  the finger came down; Fit page: both 0) and went up PULL_NEXT_PX or more, mostly vertically (|dy| >= 1.5 |dx|:
+   *  never the page swipe; upwards: never #40's pull down). No largest scroll known (null): no turn. */
+  const PULL_NEXT_PX = 80;
+  function pullNext(dx, dy, top, maxTop, minPx) {
+    if (maxTop == null || !Number.isFinite(+maxTop)) return false;
+    if (!(-dy >= (minPx || PULL_NEXT_PX)) || Math.abs(+dy) < 1.5 * Math.abs(+dx)) return false;
+    return +top >= Math.max(0, +maxTop) - 2;
+  }
+
+  /** v0.23 review (#108 D11, #40): a mouse press on a scrolling box's own scrollbar (outside its client area: right of
+   *  clientWidth, under clientHeight, or before it), never on its content: a drag of the thumb scrolls, it is no pull.
+   *  p = {x, y (the press: clientX / clientY), left, top (getBoundingClientRect), clientLeft, clientTop, clientWidth,
+   *  clientHeight}. */
+  function pressOnScrollbar(p) {
+    if (!p) return false;
+    const x = (+p.x || 0) - (+p.left || 0) - (+p.clientLeft || 0), y = (+p.y || 0) - (+p.top || 0) - (+p.clientTop || 0);
+    return x < 0 || y < 0 || x >= +p.clientWidth || y >= +p.clientHeight;
+  }
+
+  /** #108 (D11): where a page just turned lands (its scrollTop) in a scrolling display mode (U1.1b): a turn back (dir
+   *  -1: the swipe to the left, →) at the end of the page before (maxTop: its largest scrollTop, the strip under its
+   *  last line drawn); a turn forward (+1: the swipe, ←, the strip, the pull up), a jump (the page box, the surah
+   *  select) or the session's follow (0) at its top; Fit page never scrolls (0). o = {dir, fit, maxTop}. */
+  function turnLanding(o) {
+    o = o || {};
+    if (o.fit === 'page' || +o.dir !== -1) return 0;
+    return Math.max(0, +o.maxTop || 0);
+  }
+
+  /** #108 (D11): the strip under the page's last line in the scrolling display modes: {page: n + 1, label: "Page n+1 ›"
+   *  (a tap opens it), peek: Shown only (the next page's first line greyed under it; in Hidden and Blind it would be a
+   *  clue)}; none in Fit page (the page never scrolls: the swipe) nor after page 604. o = {page, fit, mode}. */
+  function nextStrip(o) {
+    o = o || {};
+    const n = Math.round(+o.page);
+    if (!(n >= 1 && n < 604) || (o.fit !== 'width' && o.fit !== 'free')) return null;
+    return {page: n + 1, label: `Page ${n + 1} ›`, peek: o.mode === 'show'};
+  }
+
+  /** #108 (D11): the next page's lines the strip's peek draws (Shown) -> their numbers (n): its first line of words,
+   *  with the surah header and basmala before it when that page opens a surah (an empty line: skipped). lines = that
+   *  page's `lines` (U1.1b). */
+  function peekLines(lines) {
+    const out = [];
+    for (const ln of Array.isArray(lines) ? lines : []) {
+      if (!ln) continue;
+      if (ln.kind === 'words') { out.push(+ln.n); break; }
+      if (ln.kind === 'surah' || ln.kind === 'basmala') out.push(+ln.n);
+    }
+    return out;
   }
 
   /** #40: the starter hint is offered in Blind while no word of the page is visible yet (said, revealed, final: with or
@@ -496,19 +745,49 @@
   }
 
   /** #38 (user, 2026-10-23: "the table Progress page needs to be labeled with the sourat name … I don't want to write
-   *  bakarah 20 times but also if we change the order … so do it in a good manner not too redundant"): the Surah cells
-   *  of the Progress rows in the order shown (rows = [{surahs: [ids, mushaf order]}], names = {id: English name}) ->
-   *  [{text, title}]: the names joined by " · " ("Surah n" for one the page does not know); the text is empty when
-   *  the row holds one surah that the row just above also holds (the first row and every row of two or three surahs
-   *  are named), so the rule follows any sort; the title always names them. A row without surahs: both empty. */
+   *  bakarah 20 times but also if we change the order … so do it in a good manner not too redundant"), revised by #95
+   *  (v0.21, D3; user, 2026-11-01: "if both names are on the same page then put '... • Mariem' … if only one name per
+   *  page then put 'Al-Fatiha'"): the Surah cells of the Progress rows in the order shown (rows = [{surahs: [ids,
+   *  mushaf order], starts: [the ids whose ayah 1 is on the page]}], names = {id: English name}) -> [{text, title}].
+   *  One surah: its name, always. Several: when the page's first surah does not start on it and the row just above
+   *  holds it, "… • " + the names starting on the page; otherwise every name joined by " • " ("Surah n" for one the
+   *  page does not know). A row without starts (an engine before 0.21): every surah but the first starts there (on a
+   *  page of several surahs only the first may not). The title names them all; a row without surahs: both empty. */
   function progressSurahLabels(rows, names) {
     const nm = (id) => (names && names[id]) || `Surah ${id}`;
     return (rows || []).map((r, i) => {
       const ids = r && Array.isArray(r.surahs) ? r.surahs : [];
-      const title = ids.map(nm).join(' · ');
+      const title = ids.map(nm).join(' • ');
+      if (ids.length < 2) return {text: title, title};
+      const starts = Array.isArray(r.starts) ? r.starts : ids.slice(1);
       const above = i > 0 && rows[i - 1] && Array.isArray(rows[i - 1].surahs) ? rows[i - 1].surahs : [];
-      return {text: ids.length === 1 && above.includes(ids[0]) ? '' : title, title};
+      const goesOn = !starts.includes(ids[0]) && above.includes(ids[0]);
+      return {text: goesOn ? ['…'].concat(ids.filter(id => starts.includes(id)).map(nm)).join(' • ') : title, title};
     });
+  }
+
+  /** #95 (v0.21, D3; user, 2026-11-01: "make the row dense when they are successive. if there is a gap then have a gap
+   *  … so that we feel that there is at least a page here missing never recited"): the gap row drawn before each
+   *  Progress row (rows in the order shown, state = the sort state) -> ['' | '⋯ N page(s) never recited', ...]: under
+   *  the Page sort only (the first sort key, either direction), between two rows whose pages are not adjacent. */
+  function progressGaps(rows, state) {
+    const byPage = normalizeSortState(state)[0].col === 'page';
+    return (rows || []).map((r, i) => {
+      const n = byPage && i > 0 ? Math.abs(+r.page - +rows[i - 1].page) - 1 : 0;
+      return n > 0 ? `⋯ ${n} page${n === 1 ? '' : 's'} never recited` : '';
+    });
+  }
+
+  /** #95 (v0.21, D3; user: "add another column with a small pie that show how much of the page is actually still to be
+   *  learned, it is just approximate"): a Progress row's pie {fill: the page's share of words in learned ayat, % of
+   *  the circle, 1 decimal; label: 'n % learned'} (n rounded, 100 only when full, 0 only when empty); null for a row
+   *  without words (an engine before 0.21). */
+  function learnedPie(r) {
+    const w = r ? +r.words : 0;
+    if (!(w > 0)) return null;
+    const lw = Math.max(0, Math.min(w, +r.learned_words || 0));
+    const pct = lw === w ? 100 : lw === 0 ? 0 : Math.min(99, Math.max(1, Math.round(100 * lw / w)));
+    return {fill: Math.round(1000 * lw / w) / 10, label: `${pct} % learned`};
   }
 
   /** #42 (user, 2026-10-25: "replace the date by the nb of days ago it was recited from: today, 1, 2, ... 99, +99 …
@@ -602,6 +881,13 @@
     return {bolt: ctx.showHist && last && last.outcome === 'mistake' && last.ins ? 'hist' : null, wordRed: false};
   }
 
+  /** #72: the drawn words of rows (per line, or one list) in one list: an ayah marker ({marker: true}: it lies in the gap
+   *  it belongs to) is none; #108 (v0.23, D11): nor the strip under the page (data-strip: {strip: true}) nor any rect
+   *  without its page index (k). */
+  function drawnWords(rows) {
+    return [].concat(...(rows || []).map(r => (Array.isArray(r) ? r : [r]))).filter(w => w && !w.marker && !w.strip && w.k != null);
+  }
+
   /** #72 (v0.19, X2.12b): the gap a tap at (x, y) falls in -> the page index of the word after it, or null. rows = the
    *  drawn words in reading order, per line or all in one list (Own size), each {k, kl (its first and last page index:
    *  a written word of two spoken words, U1.1e), left, right, top, bottom} (ayah markers {marker: true} are skipped:
@@ -611,7 +897,7 @@
    *  page's first word: no check); left of a line's last word = the gap before the next line's first word (none: null).
    *  Inside a word, or between words that are not consecutive (Blind: an unrevealed word between): null. */
   function gapAt(x, y, rows) {
-    const words = [].concat(...(rows || []).map(r => (Array.isArray(r) ? r : [r]))).filter(w => w && !w.marker);
+    const words = drawnWords(rows);
     const lines = [];
     for (const w of words) {
       const cur = lines[lines.length - 1], mid = (w.top + w.bottom) / 2;
@@ -655,9 +941,37 @@
    *  gapAt's. The ⚡'s tap pad lies over the gap and may reach into the words beside it (a justified gap of a few
    *  pixels): a tap there is that word's (its popover, #67's double tap), never the ⚡'s. */
   function wordAt(x, y, rows) {
-    const words = [].concat(...(rows || []).map(r => (Array.isArray(r) ? r : [r]))).filter(w => w && !w.marker);
+    const words = drawnWords(rows);
     const w = words.find(r => x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
     return w ? w.k : null;
+  }
+
+  // #72 (v0.21, D7): a drag quicker than DRAG_FLICK_MS and long enough for the page swipe (U1.1c) is a flick that turns
+  // the page, never an insertion; a click within DRAG_CLICK_MS of an insertion's drag is the drag's own (opens nothing)
+  // v0.21 review: DRAG_MIN_PX of travel at least, else a tap that drifted over a word's edge (a justified gap is a few
+  // px) or a tap on the ⚡'s pad (B's span, reaching into A's box) toggled an insertion and swallowed the popover
+  const DRAG_FLICK_MS = 250, DRAG_CLICK_MS = 400, DRAG_MIN_PX = 12;
+
+  /** #72 (v0.21, D7; user, 2026-11-01: "i put my finger on word A and move it to word B and release then insert
+   *  +mistake electrc in between. same gesture also undo it"): a finger (or the mouse) down on word A and up on word B
+   *  -> the page index of the later of the two (the ⚡ toggles in the gap before it, as the gap's double tap), or null.
+   *  down = {k (A's page index, the span's data-k; null: it came down on no word), x, y, t (ms), top (the mushaf's
+   *  scrollTop then)}; up = {x, y, t, top}; rows as gapAt's, read at the release. A and B are consecutive drawn words
+   *  (A.kl + 1 = B.k, or the other way: either direction is the same gap), never across a surah (rows say s), never with
+   *  an unrevealed word between (Blind). None: B is A (a tap), the release in a gap or off the words, the mushaf
+   *  scrolled meanwhile (a scroll), or a quick flick (< DRAG_FLICK_MS) long enough to turn the page (swipePage). */
+  function dragInsertAt(down, up, rows) {
+    if (!down || down.k == null || !up) return null;
+    if ((+up.top || 0) !== (+down.top || 0)) return null;
+    const dx = up.x - down.x, dy = up.y - down.y;
+    if (Math.hypot(dx, dy) < DRAG_MIN_PX) return null;
+    if (up.t - down.t < DRAG_FLICK_MS && swipePage(dx, dy)) return null;
+    const kb = wordAt(up.x, up.y, rows);
+    if (kb == null || kb === +down.k) return null;
+    const words = drawnWords(rows);
+    const a = words.find(w => w.k === +down.k), b = words.find(w => w.k === kb);
+    if (!a || !b || (a.s != null && b.s != null && a.s !== b.s)) return null;
+    return a.kl + 1 === b.k ? b.k : b.kl + 1 === a.k ? a.k : null;
   }
 
   // ---------------------------------------------------------------- X2.12 (b) the page follows new recitation only
@@ -702,18 +1016,29 @@
   // #31 (user, 2026-10-24): vary = Vary start and end (off: "the user checks this option"), gap_s = the pause between
   // plays (#89, user 2026-10-31: 6 s, was 3; 0-30); v = the form's version (20: the pause default is 6, migrateListenForm);
   // reciter (#93, user 2026-10-31: "add a combo box in listen to change the reader, yasser dussary as default"): an id of
-  // RECITER_IDS, the ids of recite/listen.py RECITERS in their order (test_ui_logic.py checks they are the same)
-  const RECITER_IDS = ['yasser_ad-dussary', 'yaser_salamah', 'alafasy', 'fares_abbad'];
-  const LISTEN_DEFAULT = {tab: 'page', surah: 1, ayah_from: 1, ayah_to: 7, page_from: 1, page_to: 1, repeat: 17, vary: false,
-    gap_s: 6, v: 20, reciter: RECITER_IDS[0]};
+  // RECITER_IDS, the ids of recite/listen.py RECITERS in their order (test_ui_logic.py checks they are the same); v0.21
+  // (#93 reopened, user 2026-11-01, D10): Sudais added, then Mix (a reciter per play) and the Meddeb selection; v0.22
+  // (#93, plan D8): Yasser Salamah's Hadr replaces his murattal, whose old id is an alias of it (RECITER_ALIASES, as the
+  // engine's listen.reciter)
+  const RECITER_IDS = ['yasser_ad-dussary', 'sudais', 'yaser_salamah_hadr', 'alafasy', 'fares_abbad', 'mix', 'meddeb'];
+  const RECITER_ALIASES = {yaser_salamah: 'yaser_salamah_hadr'};
+  // #115 (v0.23, D3; user, 2026-11-04: "the start-stop location (surah eya or page, default surah eya)"): Surah : Eyah
+  // first; v 23 marks a form saved since (its tab a choice: migrateListenForm)
+  const LISTEN_DEFAULT = {tab: 'ayah', surah: 1, ayah_from: 1, ayah_to: 7, page_from: 1, page_to: 1, repeat: 17, vary: false,
+    gap_s: 6, v: 23, reciter: RECITER_IDS[0]};
   const OLD_GAP_S = 3;   // #89: the pause default before v0.20
+  const TAB_V = 23;      // #115 (D3): a form saved before v0.23 kept the old default tab, Page
   const GAP_MAX_S = 30;
   const N_PAGES = 604;
 
   function int(v, dflt) { const n = parseInt(v, 10); return Number.isFinite(n) ? n : dflt; }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
-  /** #93: a known reciter id, else the default (Yasser Al-Dossary), as the engine's listen.reciter does. */
-  function knownReciter(id) { return RECITER_IDS.includes(id) ? id : RECITER_IDS[0]; }
+  /** #93: a known reciter id, else the default (Yasser Al-Dossary), as the engine's listen.reciter does (v0.22: an old
+   *  id its new one). */
+  function knownReciter(id) {
+    const r = typeof id === 'string' && Object.prototype.hasOwnProperty.call(RECITER_ALIASES, id) ? RECITER_ALIASES[id] : id;
+    return RECITER_IDS.includes(r) ? r : RECITER_IDS[0];
+  }
 
   /** #93: the Reciter select's options [{id, label}] from listen_reciters ([{id, label, name}], B3.14): the ids this page
    *  knows, in the engine's order (a label missing: the id); none (an engine without the call, a broken answer): Yasser
@@ -755,11 +1080,14 @@
 
   /** #89 (user, 2026-10-31: "make default pause value to 6 seconds"): a `listen` saved before v0.20 (no marker v) with
    *  the old default pause 3 gets 6, once: the page saves it back with v (clampListenForm), so a 3 chosen afterwards
-   *  stays 3 and Kotlin (the car, the shortcuts) reads 6 too. Anything else comes back as it was (a new object). */
+   *  stays 3 and Kotlin (the car, the shortcuts) reads 6 too. Anything else comes back as it was (a new object).
+   *  #115 (v0.23, D3): a form saved before v0.23 (v under 23) opens on Surah : Eyah once (its Page tab was the old
+   *  default, rarely a choice); a tab chosen since stays. Kotlin reads only whether `v` is there (ListenOptions). */
   function migrateListenForm(saved) {
     if (!saved || typeof saved !== 'object') return saved == null ? null : saved;
     const out = Object.assign({}, saved);
     if (out.v == null && int(out.gap_s, null) === OLD_GAP_S) out.gap_s = LISTEN_DEFAULT.gap_s;
+    if (!(int(out.v, 0) >= TAB_V)) out.tab = 'ayah';
     return out;
   }
 
@@ -812,10 +1140,46 @@
   /** #31: the farthest step of a margin (0 for none: a plan of an older engine, a whole surah). */
   function marginSteps(margin) { return (margin || []).reduce((m, c) => Math.max(m, +c.step || 0), 0); }
 
+  // ---- v0.21 (#92 / #93, plan D9 / D10) what a clip plays: its `src` {rid, name, url, from_ms?, to_ms?, ms, fallback?}
+  // (recite/listen.py); a Mix plan's clips also carry `mix`, a src per reciter: play k plays mix[(k - 1) % n]
+  /** v0.21: the mix entry of play `pass` (1 = the first play: the first reciter, Yasser) among n. */
+  function mixIndex(pass, n) { return n > 0 ? (((Math.max(1, Math.floor(+pass) || 1) - 1) % n) + n) % n : 0; }
+
+  /** v0.21 (Mix, D10): a clip as play `pass` plays it: its mix entry as src (and its ms and, in the after-margin,
+   *  its fade cuts); a clip without mix as it is. */
+  function passClip(clip, pass) {
+    if (!clip || !Array.isArray(clip.mix) || !clip.mix.length) return clip;
+    const m = clip.mix[mixIndex(pass, clip.mix.length)] || {};
+    const src = Object.assign({}, m); delete src.cuts;
+    const out = Object.assign({}, clip, {src, ms: m.ms});
+    if (Array.isArray(m.cuts)) out.cuts = m.cuts;
+    return out;
+  }
+
+  /** v0.21: the plan as play `pass` plays it (passClip on its clips and margins); a plan without mix comes back
+   *  unchanged (the same object). */
+  function passPlan(plan, pass) {
+    const has = (cs) => Array.isArray(cs) && cs.some(c => c && Array.isArray(c.mix));
+    if (!plan || !(has(plan.clips) || has(plan.margin_before) || has(plan.margin_after))) return plan;
+    const map = (cs) => (cs || []).map(c => passClip(c, pass));
+    return Object.assign({}, plan, {clips: map(plan.clips), margin_before: map(plan.margin_before),
+      margin_after: map(plan.margin_after)});
+  }
+
+  /** v0.21: where a clip's audio is: {url, from_ms, to_ms (null: the whole file), fallback, name}: its src, or for a
+   *  plan saved by 0.20 (no src) reciter.base_url + key + ".mp3" (D4.5). */
+  function clipSrc(reciter, clip) {
+    const r = reciter || {}, s = clip && clip.src;
+    if (s && s.url) return {url: s.url, from_ms: s.from_ms != null ? +s.from_ms : null, to_ms: s.to_ms != null ? +s.to_ms : null,
+      fallback: s.fallback || null, name: s.name || r.name || ''};
+    return {url: (r.base_url || '') + clip.key + '.mp3', from_ms: null, to_ms: null, fallback: null, name: r.name || ''};
+  }
+
   /** #31: the clips of one pass: the plan's margin_before clips within `before` steps, its clips, its margin_after clips
    *  within `after` steps (the margins come in playing order, a basmala with its ayah 1); the last one carries
-   *  fade_ms when the pass fades out. */
-  function passClips(plan, shape) {
+   *  fade_ms when the pass fades out. v0.21: pass given, Mix's clips of that play (passPlan). */
+  function passClips(plan, shape, pass) {
+    if (pass != null) plan = passPlan(plan, pass);   // v0.21: Mix's reciter of that play
     const s = shape || {before: 0, after: 0, fade: null};
     const after = (plan.margin_after || []).filter(c => +c.step <= s.after);
     const out = (plan.margin_before || []).filter(c => +c.step <= s.before).concat(plan.clips || [], after);
@@ -837,18 +1201,20 @@
    *  from the clips' `ms` (listen_plan); null when a length it needs is missing. Between two plays: the pause (0.25 s
    *  with Vary and a pause of 0, as the players do) and, with Vary, the average extra of a play (passShape draws
    *  before and after uniformly): before = the mean over k = 0..maxBefore of the margin_before clips with step <= k;
-   *  after = the mean over k = 0..maxAfter of the steps < k plus half of step k (the fade-out's place, on average). */
+   *  after = the mean over k = 0..maxAfter of the steps < k plus half of step k (the fade-out's place, on average).
+   *  v0.21 (Mix, D10): each play counts its own reciter's lengths (passPlan); segS is the first play's. */
   function listenEstimate(plan, form) {
     const ms = (cs) => { let t = 0; for (const c of cs) { if (!c || c.ms == null || !Number.isFinite(+c.ms)) return null; t += +c.ms; } return t; };
-    const clips = plan && plan.clips;
-    if (!clips || !clips.length) return null;
-    const seg = ms(clips);
-    if (seg == null) return null;
+    if (!plan || !plan.clips || !plan.clips.length) return null;
     const f = clampListenForm(form);
     const plays = f.repeat + 1;
-    let between = f.gap_s || (f.vary ? 0.25 : 0);
-    if (f.vary && plays > 1) {
-      const mb = plan.margin_before || [], ma = plan.margin_after || [];
+    const pause = f.gap_s || (f.vary ? 0.25 : 0);
+    // {seg, extra} of one view of the plan (Mix: one per reciter): one play, and Vary's average extra of a later play
+    const one = (v) => {
+      const seg = ms(v.clips);
+      if (seg == null) return null;
+      if (!(f.vary && plays > 1)) return {seg, extra: 0};
+      const mb = v.margin_before || [], ma = v.margin_after || [];
       const nb = marginSteps(mb), na = marginSteps(ma);
       let before = 0, after = 0;
       for (let k = 0; k <= nb; k++) {
@@ -859,10 +1225,18 @@
         if (t == null || h == null) return null;
         after += t + h / 2;
       }
-      between += (before / (nb + 1) + after / (na + 1)) / 1000;
+      return {seg, extra: before / (nb + 1) + after / (na + 1)};
+    };
+    const n = Math.max(1, ...plan.clips.map(c => (c && Array.isArray(c.mix) ? c.mix.length : 1)));
+    const views = [];
+    for (let i = 0; i < Math.min(n, plays); i++) { const r = one(passPlan(plan, i + 1)); if (!r) return null; views.push(r); }
+    let total = 0;
+    for (let i = 0; i < views.length; i++) {   // play p (0-based) is view p % n: count each view's plays
+      const k = Math.floor((plays - 1 - i) / n) + 1, later = i === 0 ? k - 1 : k;
+      total += k * views[i].seg + later * views[i].extra;
     }
-    const segS = seg / 1000;
-    return {segS, totalS: plays * segS + (plays - 1) * between, plays};
+    const segS = views[0].seg / 1000;
+    return {segS, totalS: total / 1000 + (plays - 1) * pause, plays};
   }
 
   /** #88: "keep the numbers well rounded": rounded first, then the unit picked: under 10 s whole seconds, under a
@@ -909,6 +1283,143 @@
     const p = target.plan;
     if (p && p.surah) { out.surah = p.surah; out.ayah_from = p.ayah_from; out.ayah_to = p.ayah_to; }
     return out;
+  }
+
+  // ---------------------------------------------------------------- #115 (v0.23, D3) Listen in Recite: the panel
+  // (user, 2026-11-04: "replace the listen in the menu, to a button play audio (a speaker like the Windows tray) in the
+  // recite page after the mic button. on click: switch to show mode, enlarge the bottom row as much as needed to have
+  // the start-stop location (surah eya or page, default surah eya) and quick shortcuts and the play button and
+  // repetition … when i change the start it changes the text seen so you see the start already, and when you change
+  // the end it changes the eya to see the end. once you press play it will reduce all that to keep only one row")
+  /** D3: the panel's first range, the page on screen: Surah : Eyah = the page's surah (`surah`, the top bar's pick,
+   *  when the page holds it, else the page's first ayah's), its first and last ayah there; Page = that page. The tab,
+   *  Repeat and the rest stay the form's. ayahs = the page's [{surah, ayah}] (pageData.ayahs). */
+  function listenFormFromPage(ayahs, page, form, surah) {
+    const out = Object.assign({}, LISTEN_DEFAULT, form || {});
+    const p = int(page, 0);
+    if (p >= 1) { out.page_from = p; out.page_to = p; }
+    const as = (Array.isArray(ayahs) ? ayahs : []).filter(a => a && +a.surah > 0 && +a.ayah > 0);
+    if (!as.length) return out;
+    const s = as.some(a => +a.surah === +surah) ? +surah : +as[0].surah;
+    const mine = as.filter(a => +a.surah === s).map(a => +a.ayah);
+    out.surah = s; out.ayah_from = Math.min(...mine); out.ayah_to = Math.max(...mine);
+    return out;
+  }
+
+  /** D3: what the text shows while the range is picked (the live preview): the end that changed, {surah, ayah} on
+   *  Surah : Eyah or {page} on Page: a new tab, a new surah or From: the start; To: the end; nothing of the range
+   *  (Repeat, the reciter): null. prev null: the start. */
+  function listenPreviewTarget(prev, next) {
+    if (!next) return null;
+    const start = next.tab === 'ayah' ? {surah: +next.surah, ayah: +next.ayah_from} : {page: +next.page_from};
+    if (!prev || prev.tab !== next.tab) return start;
+    if (next.tab === 'ayah') {
+      if (+prev.surah !== +next.surah || +prev.ayah_from !== +next.ayah_from) return start;
+      return +prev.ayah_to !== +next.ayah_to ? {surah: +next.surah, ayah: +next.ayah_to} : null;
+    }
+    if (+prev.page_from !== +next.page_from) return start;
+    return +prev.page_to !== +next.page_to ? {page: +next.page_to} : null;
+  }
+
+  /** D3: selects, nothing typed: the end just picked (`end`: 'ayah_from' | 'ayah_to' | 'page_from' | 'page_to') moves
+   *  the other one when it passes it (a From past To takes To along, a To before From takes From): the range is never
+   *  reversed under the finger. A new object. */
+  function followRangeEnd(form, end) {
+    const f = Object.assign({}, form);
+    const pair = {ayah_from: ['ayah_to', 1], ayah_to: ['ayah_from', -1], page_from: ['page_to', 1], page_to: ['page_from', -1]}[end];
+    if (pair && (+f[end] - +f[pair[0]]) * pair[1] > 0) f[pair[0]] = f[end];
+    return f;
+  }
+
+  /** #92 (v0.23, D17): word w is in what Listen plays (.w.playing): playing = {surah, ayah, to} (to: a unit clip's last
+   *  ayah, Yasser's clean recording joins its ayat without a pause; absent = the ayah alone); null = nothing. */
+  function playingHas(playing, w) {
+    if (!playing || !w || +w.surah !== +playing.surah) return false;
+    return +w.ayah >= +playing.ayah && +w.ayah <= +(playing.to || playing.ayah);
+  }
+
+  /** D3: the pale tint of the range while the panel is open (.w.inrange): a word of the Surah : Eyah tab's surah
+   *  between its ayat, or every word of a page of the Page tab's range. */
+  function inListenRange(form, w, page) {
+    if (!form || !w) return false;
+    if (form.tab === 'ayah') return +w.surah === +form.surah && +w.ayah >= +form.ayah_from && +w.ayah <= +form.ayah_to;
+    return +page >= +form.page_from && +page <= +form.page_to;
+  }
+
+  /** D3: what closing the panel gives back ("close without playing restores mode/page/scroll"). saved = {mode, page,
+   *  scroll} at its opening; now = {played (▶ or a start: what is on screen stays), mode, page}. The mode only while it
+   *  is still Shown (a mode picked meanwhile stays); the page when the preview left it; the scroll (on that page).
+   *  -> {mode, page, scroll}, null for what stays. */
+  function listenPanelClose(saved, now) {
+    const n = now || {};
+    if (!saved || n.played) return {mode: null, page: null, scroll: null};
+    return {mode: saved.mode && saved.mode !== 'show' && n.mode === 'show' ? saved.mode : null,
+      page: +saved.page > 0 && +saved.page !== +n.page ? +saved.page : null,
+      scroll: saved.scroll != null && Number.isFinite(+saved.scroll) ? +saved.scroll : null};
+  }
+
+  /** D3: the speaker left of the microphone shows only with the microphone off: never while it listens, looks for the
+   *  place or a start opens, never during a review card, with the panel open (its own bar) or in Listen's row (its chip
+   *  opens the panel). o = {running, paused, searching, starting, card, panel, bar, pending}; v0.23 review: pending = a
+   *  microphone press waiting for the speech model (a start opens: seconds, a phone's download minutes). */
+  function speakerButton(o) {
+    o = o || {};
+    return !(o.searching || o.starting || o.pending || (o.running && !o.paused) || o.card || o.panel || o.bar === 'listen');
+  }
+
+  // D3: the plays select (Repeat = plays − 1: settings.listen.repeat keeps its meaning for the car and the shortcuts);
+  // the car's Repeat cycle (no repeat, 1, 3, 7, 17) is among them
+  const PLAYS = [1, 2, 3, 4, 5, 8, 10, 18, 20, 30, 50, 100];
+  /** D3: the plays select's options [{repeat, text: '×18'}], the form's own Repeat added when it is none of them. */
+  function playsOptions(repeat) {
+    const r = clamp(int(repeat, LISTEN_DEFAULT.repeat), 0, 999);
+    const plays = PLAYS.includes(r + 1) ? PLAYS : PLAYS.concat(r + 1).sort((a, b) => a - b);
+    return plays.map(n => ({repeat: n - 1, text: `×${n}`}));
+  }
+
+  /** D3: the length in the panel's bar row, short: "≈ 3 min · total 1.1 hours" (one play, all the plays), "≈ 3 min"
+   *  with one play; '' without an estimate (#88's numbers, L.listenEstimate). */
+  function listenLengthText(est) {
+    if (!est) return '';
+    return est.plays > 1 ? `≈ ${formatDuration(est.segS)} · total ${formatDuration(est.totalS)}` : `≈ ${formatDuration(est.segS)}`;
+  }
+
+  /** D3: the now-playing chip of Listen's row: the ayah and the play, "2:255 · 3/18" (the clip's label, else surah:ayah;
+   *  the pause between plays: "pause · 4/18", the play that follows); '' when no Listen plays (the car's Recite is
+   *  none). */
+  function listenChipText(s) {
+    if (!s || !LISTEN_ON.has(s.status) || s.source === 'recite') return '';
+    const n = +s.passes > 1 && +s.pass ? +s.passes : 0;
+    if (s.kind === 'gap' || (s.label === 'Pause' && !s.key)) return 'pause' + (n ? ` · ${Math.min(+s.pass + 1, n)}/${n}` : '');
+    const where = s.label || (+s.surah > 0 && +s.ayah > 0 ? `${+s.surah}:${+s.ayah}` : '…');
+    return where + (n ? ` · ${+s.pass}/${n}` : '');
+  }
+
+  // ---- #105 (v0.23, D5) / #114 (D6) the quick chips
+  const QUICK_KINDS = ['weak', 'learn', 'manzil'];
+  const QUICK_NAMES = {weak: 'Weak page', learn: 'Learn page', manzil: 'Oldest page'};
+  /** #105 (D5; user, 2026-11-02: "I prefer to just not show the button rather than polluting the UI with unavailable
+   *  stuff, just wait to when it becomes available to show it. it can be hidden again if it does not exist anymore"):
+   *  the quick chips from listen_targets' answer t: each kind's target, null = no chip; a failed call (t no object)
+   *  keeps the chips drawn last (prev; none before: none). The keys stay the engine's (manzil, #114). */
+  function quickChips(t, prev) {
+    const out = {};
+    const from = t && typeof t === 'object' ? t : (prev || {});
+    for (const k of QUICK_KINDS) out[k] = from[k] && typeof from[k] === 'object' ? from[k] : null;
+    return out;
+  }
+
+  /** #105 / #114 (D5, D6: "Oldest page" on screen): a chip's words: {label (the engine's; Learn page always, its
+   *  "Next to learn" is the car's), short (the detail's first part: "p. 12", "1:1", "p. 12–15"), lock (#91: Learn page
+   *  locked: the reason, said in a toast at its tap; '' otherwise), title}. review = the Review exists (L.reviewOn). */
+  function quickChipView(kind, q, review) {
+    const t = q || {};
+    const label = kind === 'learn' ? QUICK_NAMES.learn : String(t.label || QUICK_NAMES[kind] || kind);
+    const detail = String(t.detail || '');
+    const lock = kind === 'learn' ? learnLockReason(t.lock, review) : '';
+    const n = clamp(int(t.repeat, 0), 0, 999) + 1;
+    return {label, short: detail.split(' · ')[0], lock,
+      title: `${lock ? lock + ' (advice: it still plays). ' : ''}${label}: ${detail || 'its range'}, ${n} play${n === 1 ? '' : 's'}`};
   }
 
   /** U1.1b: the 15 lines of a page, with the leading empty lines of pages 1 and 2 (7 empty, then the text) shared above
@@ -1029,11 +1540,12 @@
    *  still starts: 'start', 'busy' (a session or a search started meanwhile) or 'left' (the user left Recite, e.g. to
    *  play something in Listen: a microphone session there would record the reciter, U1.13; or pressed Listen's play
    *  meanwhile (`played`), which opens Recite since 2026-10-04: the session would stop that playback; or the page is
-   *  `hidden`: the app went to the background during a download, review 2026-10-11: no microphone from there). */
+   *  `hidden`: the app went to the background during a download, review 2026-10-11: no microphone from there). v0.23
+   *  review (#115 D3): Listen is a panel inside Recite: the panel open meanwhile (`panel`) is the old view left. */
   function startAfterModel(s) {
     s = s || {};
     if (s.running || s.starting || s.searching) return 'busy';
-    return s.view === 'recite' && !s.played && !s.hidden ? 'start' : 'left';
+    return s.view === 'recite' && !s.panel && !s.played && !s.hidden ? 'start' : 'left';
   }
 
   /** #78 (v0.20, D5; user, 2026-10-30: "why don't you just start recording on clic and when the model loading is done
@@ -1124,6 +1636,73 @@
     return mode === 'blind' ? '﴿  ﴾' : '﴿' + n + '﴾';
   }
 
+  /** #113 (v0.23, D9; user, 2026-11-04: "when i start reciting in the middle of the page there is no sign that i
+   *  skipped anything at the beginning of the page, in Blind mode … maybe better just keep some space and eventually
+   *  3 dots"): where Blind draws its "…" (the words before the first word drawn were not recited). lines = the page's
+   *  lines (pageLines: {kind, runs: [[start, n, ayahEnd]]}), drawn[k] = page word k is drawn (a word, a bar, a review
+   *  card's grey cue), o = {fit, words (the page's: {surah, ayah, idx})} -> null or {line (index in lines), at, k (the
+   *  first drawn word)}: 'inline' on k's line when that line holds a skipped word (the "…" takes its room), else
+   *  'alone' on the nearest words line above (wholly skipped, so blank: the "…" centred there); Own size (fit 'free'):
+   *  'para', a line of its own before the paragraph that holds k. None when nothing is drawn (the starter hint's
+   *  case, #40), when k is the page's first word, or when k opens a surah (its header says where it starts). */
+  function skipMark(lines, drawn, o) {
+    o = o || {};
+    const d = Array.isArray(drawn) ? drawn : [], ws = Array.isArray(o.words) ? o.words : [];
+    const k0 = d.findIndex(Boolean);
+    if (k0 <= 0) return null;
+    const w = ws[k0];
+    if (w && +w.ayah === 1 && +w.idx === 0) return null;
+    const ls = Array.isArray(lines) ? lines : [];
+    const words = (ln) => !!ln && ln.kind === 'words' && Array.isArray(ln.runs) && ln.runs.length > 0;
+    const li = ls.findIndex(ln => words(ln) && ln.runs.some(([s, n]) => k0 >= +s && k0 < +s + +n));
+    if (li < 0) return null;
+    if (o.fit === 'free') return {line: li, at: 'para', k: k0};
+    if (Math.min(...ls[li].runs.map(run => +run[0])) < k0) return {line: li, at: 'inline', k: k0};
+    for (let j = li - 1; j >= 0; j--) if (words(ls[j])) return {line: j, at: 'alone', k: k0};
+    return null;
+  }
+
+  /** #107 (v0.23, D10; user, 2026-11-02, issue #107: a tap on the ayah marker {62} underlines the fewest words before
+   *  it, from the end of the ayah backwards, that tell the place uniquely, so a qari can recite on from 2:63; it may be
+   *  longer than an ayah and run onto the page before): the words the marker of ayah s:a links to. words / ayahs = the
+   *  page's (`ayahs[].link` = k of quran_text.context_words(s, a + 1), #40's table, B3.8; `link_header`) -> {k, keys
+   *  (page word indices in reading order: the last k words before the marker on this page, never out of the surah),
+   *  before (how many of them are on the page before), header (they reach the surah's start: its header is part of
+   *  them), next {surah, ayah}} | {end: true, next: the next surah's first ayah or null} (a surah's last ayah) | null
+   *  (no such ayah on the page, or its entry has no `link`). */
+  function ayahLink(words, ayahs, s, a) {
+    const ws = Array.isArray(words) ? words : [];
+    const e = (Array.isArray(ayahs) ? ayahs : []).find(x => x && +x.surah === +s && +x.ayah === +a);
+    if (!e || !('link' in e)) return null;   // an engine without the link (none on screen)
+    if (e.link == null) return {end: true, next: +s < 114 ? {surah: +s + 1, ayah: 1} : null};
+    const end = +e.start + +e.n - 1;
+    let first = end;
+    while (first > 0 && ws[first - 1] && +ws[first - 1].surah === +s) first--;
+    const k = Math.max(1, Math.round(+e.link) || 1), from = Math.max(first, end - k + 1);
+    const keys = [];
+    for (let j = from; j <= end; j++) keys.push(j);
+    return {k, keys, before: Math.max(0, k - keys.length), header: !!e.link_header, next: {surah: +s, ayah: +a + 1}};
+  }
+
+  /** #107 (v0.23, D10): the toast of a marker's tap. o = {k, before (words on the page before), page (its number),
+   *  next ('2:63'), mode, header (the surah's name when the words reach its start), hidden (how many of them a live
+   *  session does not show yet), end, nextSurah (a surah's last ayah: the next surah's name; none: 114:6)}. Blind never
+   *  names the ayah (#86: the number is a clue). */
+  function ayahLinkText(o) {
+    o = o || {};
+    if (o.end) return o.nextSurah ? `The surah ends here: ${o.nextSurah} follows.` : "The Qur'an ends here.";
+    const k = Math.max(1, Math.round(+o.k) || 1), one = k === 1;
+    const who = o.mode === 'blind' || !o.next ? 'The next ayah' : String(o.next);
+    const these = one ? 'this word' : `these ${k} words`;
+    const out = [o.header ? `${who} is certain after ${these}, counted from the start of ${o.header} (its name tells it).`
+      : `${who} is certain after ${these}: ${one ? 'it occurs' : 'they occur'} only once in the Qur'an.`];
+    const b = Math.round(+o.before) || 0;
+    if (b > 0 && o.page) out.push(b === 1 ? `The first one is on page ${o.page}.` : `The first ${b} are on page ${o.page}.`);
+    const h = Math.round(+o.hidden) || 0;
+    if (h > 0) out.push(h === 1 ? '1 of them is not shown yet.' : `${h} of them are not shown yet.`);
+    return out.join(' ');
+  }
+
   /** U1.2b (D4, 2026-10-10): this session's reading of a word for the history glow: the user's mark, or a final
    *  verdict ('mistake' at or above the threshold, else 'ok'); a provisional verdict is no reading (it was the orange
    *  glow of #4). null outside a session, and once it is saved (the server's readings hold it: no double count).
@@ -1165,11 +1744,13 @@
    *  hint{silent} / skip_to{silent})? Only while the user paused it (not the page's own pause around a clip or a
    *  replay: autoPaused), never on the car's session the page follows (car), never in Hidden (the mode wins, a card
    *  too); then in Blind, a live Review card (#49) or a card left with ✕ (cardSilent, #57).
-   *  o = {paused, autoPaused, car, card, cardSilent, mode}. */
+   *  v0.22 (#101 D2/P4; user, 2026-11-02: "I am ok with the proposal do them all"): one meaning per gesture, the modes
+   *  only draw: the microphone off by the user = read, in every mode (a card or not; in Hidden the engine makes the
+   *  word a practice row, counted nowhere: practice_words). o = {paused, autoPaused, car, card, cardSilent, mode}
+   *  (card, cardSilent, mode: no longer read). */
   function silentReveal(o) {
     o = o || {};
-    if (!o.paused || o.autoPaused || o.car || o.mode === 'hide') return false;
-    return !!o.card || !!o.cardSilent || o.mode === 'blind';
+    return !!o.paused && !o.autoPaused && !o.car;
   }
 
   /** #73 (v0.19, D3): ◂ / ⏮ with no session running on the page. Blind: 'silent_start' (a silent session starts at the
@@ -1180,11 +1761,43 @@
    *  page following nothing); 'wait' too while a press's start waits for the model download or load (modelBusy: a
    *  start then cancels that wait or is dropped). Review of 0.19: 'wait' also while ■ still saves the session on screen
    *  (stopping: a new session opened over it, and on the web its `done` closed the new one). o = {mode, running,
-   *  starting, searching, review, listening, car, modelBusy, stopping}. */
+   *  starting, searching, review, listening, car, modelBusy, stopping}. v0.22 (#101 D2): Hidden too ('silent_start':
+   *  the words read there are practice rows); Shown has no ◂ (v0.21, D5): 'show'. */
+  /** v0.22 review (#97, user 2026-11-01: "I recite, mic off, i chose a surah then clicked button next"): does ◂ / ⏮
+   *  go to the open group (hint / skip_to after its reciter)? Not when the user switched its microphone off and the
+   *  page shown holds none of its next words (another surah picked, another page): the page's own words are shown
+   *  there (reveal's outside path: the surah pick's floor), never a word of the old group counted as read. A card, a
+   *  clip's pause (autoPaused) and a group listening keep the engine's reveal. */
+  function revealToGroup(o) {
+    o = o || {};
+    return !(o.paused && !o.autoPaused && !o.card && !o.onGroupPage);
+  }
+
   function revealOutside(o) {
     o = o || {};
-    if (o.mode !== 'blind' || o.running || o.searching || o.review || o.listening || o.car) return 'show';
+    if ((o.mode !== 'blind' && o.mode !== 'hide') || o.running || o.searching || o.review || o.listening || o.car) return 'show';
     return o.starting || o.modelBusy || o.stopping ? 'wait' : 'silent_start';
+  }
+
+  /** v0.22 (#97 D10; user, 2026-11-01: "i chose a surah then clicked button next, it showed a word before that surah
+   *  and at the beginning of the page, it should have showed something at the beginning of the surah. if i switched to
+   *  left right page or … a specific page with the input box then yes give the first word of the page"): the index of
+   *  the picked surah's first word on the page shown (the surah select's choice, kept on its page: surahPick = {page,
+   *  surah}); ◂ outside a session never reveals a word before it (reveal's hidden()). 0 without a pick, for a pick on
+   *  another page or a surah not on it. */
+  /** v0.22 review 2 (#97 D10): does the surah picked with the select on the page shown win over the paused group whose
+   *  next words are on it (groupWords: those words, {surah, ayah, idx})? Yes when the pick is on this page and none of
+   *  them is in the picked surah: ◂ / ⏮ then take the page's path (revealFloor: the picked surah's first word) and the
+   *  microphone searches (onGroupPage false); a pick of the surah the group goes on in leaves the group in front. */
+  function surahPickWins(groupWords, pick, page) {
+    if (!pick || pick.page !== page || !Array.isArray(groupWords) || !groupWords.length) return false;
+    return !groupWords.some(w => w && +w.surah === +pick.surah);
+  }
+
+  function revealFloor(words, pick, page) {
+    if (!Array.isArray(words) || !pick || pick.page !== page) return 0;
+    const k = words.findIndex(w => w && +w.surah === +pick.surah);
+    return k < 0 ? 0 : k;
   }
 
   /** #84 (v0.20, D10; user 2026-10-31: "if it is in mic on, then keep this color. if it is in mic off then use a green
@@ -1193,19 +1806,45 @@
    *  when a press is a silent reveal (silentReveal: Blind paused by the user, a card's microphone off); a hint while the
    *  microphone listens, the page's own pause for a clip, the car's session, a paused Shown / Hidden session (the user's
    *  stated aim: what the press counts as). o = reveal()'s inputs: {running, session, paused, autoPaused, car, card,
-   *  cardSilent, mode}. */
+   *  cardSilent, mode}. v0.22 (#101 D2): silentReveal no longer reads the mode: a paused Shown / Hidden session reads
+   *  too (pale green). */
   function hintsRead(o) {
     o = o || {};
     return !(o.running && o.session) || silentReveal(o);
   }
 
+  /** #73 (v0.21, D5; user 2026-11-01: "Hidden : do not log ok but log mistakes"): the toast of a + Correct the page
+   *  does not save: in Hidden (practice) with no session on screen (not the running session's word, `live`, and no
+   *  finished or loaded session the mark would name, `named`), a correct reading would count as recited; null
+   *  otherwise (+ Mistake, another mode, a session's word: its own rule decides). v0.21 review: a Remove of a mistake
+   *  (o.last, the word's newest outcome) turns it into a correct reading: refused the same way (a Remove of a correct
+   *  reading drops it, an undo takes a mark back: saved). o = {mode, live, named, last}. */
+  function hiddenCorrectRefused(event, o) {
+    o = o || {};
+    if (o.mode !== 'hide' || o.live || o.named) return null;
+    if (event === 'correct') return 'Hidden is practice: + Correct is not saved (+ Mistake is). Switch to Shown or Blind to count it.';
+    if (event === 'remove' && o.last === 'mistake') {
+      return 'Hidden is practice: Remove mistake is not saved (it would count as read correctly). Switch to Shown or Blind to count it.';
+    }
+    return null;
+  }
+
+  /** v0.21 review (#73, D5): does the saved session on screen (finished and saved, or loaded with ◀: its folder) hold a
+   *  reading of the word, so that a mark on it names that session (Profile.add_mark: only when it read the word)?
+   *  st = the page's stateOf(w) (pending: a word it never covered or did not reach). */
+  function sessionReadIt(session, st) {
+    return !!(session && session.folder && st && st.status && st.status !== 'pending');
+  }
+
   /** #73 (v0.19, D4): the B3.8 mode{mode} a text-mode change sends while a session the page owns is open (started, not
    *  being stopped, not a search, not the car's session it follows: the phone's mode never makes the car's practice);
-   *  null otherwise. o = {running, session, stopping, car, searching}. */
+   *  null otherwise. o = {running, session, stopping, car, searching, ago}. v0.21 review (D5, practice per word): ago =
+   *  seconds since the press of a mode sent once it settled (the H key): the engine puts the switch there. */
   function modeMsg(m, o) {
     o = o || {};
     if (!o.running || !o.session || o.stopping || o.car || o.searching) return null;
-    return {type: 'mode', mode: m};
+    const ago = Math.round((+o.ago || 0) * 100) / 100;
+    return ago > 0 ? {type: 'mode', mode: m, ago} : {type: 'mode', mode: m};
   }
 
   /** D3 (#3, user 2026-10-10): the bar's unsettled-speech gauge (U1.2c) and ⚠ from a state. Paused reads as finished
@@ -1252,6 +1891,16 @@
     return parts.length ? 'New ayat learned: ' + parts.join(' · ') : null;
   }
 
+  /** #96 (D2, user 2026-11-01: "the errors I am counting does not match with the current state"): the Stats page's
+   *  Current state line under Perfect learning, from stats.to_fix (the ayat / words whose latest reading is a mistake,
+   *  learned or not: the Progress table's Err summed). null for stats without it (before 0.21). */
+  function toFixLine(s) {
+    const f = s && s.to_fix;
+    if (!f || typeof f !== 'object') return null;
+    const n = Math.max(0, Math.round(+f.ayat || 0)), w = Math.max(0, Math.round(+f.words || 0));
+    return `With a mistake now: <b>${n} ${n === 1 ? 'ayah' : 'ayat'}</b> (${w} ${w === 1 ? 'word' : 'words'})`;
+  }
+
   /** U1.19 (issue #13): the Stats page's Today list (HTML items, from `stats`). "Ayat learned" follows the #13 rule of
    *  newLearnedLine: once every ayah is learned, a 0 is left out (user, 2026-10-13: "hidden if total learned is already
    *  100% and they are at 0"). */
@@ -1281,6 +1930,87 @@
     };
     if (q !== undefined) out.review = reviewCounters(q).due === 0;
     return out;
+  }
+
+  /** #91 (v0.21, D4; user, 2026-11-01: "ok we only lock the next to learn, if 3 weak pages or 10+ review"): the reason
+   *  Next to learn is locked, from progress.learn_lock (or a Listen learn target's `lock`), '' when it is not. Python
+   *  gives none once Next to learn moved forward today (the checked box wins). review: the engine has the review calls
+   *  (reviewOn); without them (the web: no Review page) a lock from the Review backlog alone is dropped, a lock from
+   *  the red pages stays (its reason names them). Advice only: the line's link and the button still work. */
+  function learnLockReason(lock, review) {
+    if (!lock || typeof lock !== 'object' || typeof lock.reason !== 'string' || !lock.reason) return '';
+    if (!review && !((+lock.red_pages || 0) >= 3)) return '';
+    return lock.reason;
+  }
+
+  /** #105 (v0.23, D5; user, 2026-11-02: "on a fresh install the progress is empty, you can populate it with an
+   *  informative guideline"): nothing recited yet (no progress, or progress.pages empty): the guide instead of the
+   *  table. */
+  function progressFresh(p) {
+    return !p || typeof p !== 'object' || !Array.isArray(p.pages) || p.pages.length === 0;
+  }
+
+  /** #105 (D5): the Progress check lines to draw, in order ('manzil' = the Oldest page, #114 D6), each only when it has
+   *  something to say: nothing recited → Next to learn alone (the guide says the rest); afterwards the Oldest page
+   *  when there is one, the Weakest page ("none" is then an achievement), Review where the review exists (its queue q
+   *  answered), Next to learn. */
+  function progressLines(p, q) {
+    if (progressFresh(p)) return ['next'];
+    return [...(p.manzil ? ['manzil'] : []), 'weak', ...(q && typeof q === 'object' ? ['review'] : []), 'next'];
+  }
+
+  /** #105 (D5; user: "something to read, not too long"): a fresh Progress' guide under Next to learn, HTML lines: the
+   *  first a paragraph, the middle ones a list, the last a paragraph; 7 lines where the review exists, 6 without it. */
+  function progressGuide(review) {
+    return [
+      `<b>Your progress appears here once you recite.</b> Each day it gives you up to ${review ? 'four' : 'three'} small tasks:`,
+      '<b>Next to learn</b>: the first ayah you have not recited yet. Recite a few new ayat each day from there.',
+      '<b>Weakest page</b>: the page with the most mistakes. Recite it again until fewer than 3 are left.',
+      '<b>Oldest page</b> (the manzil): the page you recited longest ago. Recite it before it is 6 days old, so what you learned stays.',
+      ...(review ? ['<b>Review</b>: the passages you got wrong, brought back on the days you need them.'] : []),
+      'Under them, every page you recited: its mistakes, the days since you last recited it, how much of it is learned.',
+      'Start in Recite: press the microphone and recite <span class="nowrap">Al-Fatiha</span>, or wherever you are.',
+    ];
+  }
+
+  // ---------------------------------------------------------------- #105 (v0.23, D5) calm errors of a computation
+  // user, 2026-11-02: "maybe a red info bulle here is too much of 'our app is out of control'"
+  const COMPUTE_RETRY_MS = [800, 2000];   // the waits before the 2 retries of a transient error
+
+  /** #105 (D5): an error worth asking again: fetch's TypeError (Chrome "Failed to fetch", Firefox "NetworkError …",
+   *  Safari "Load failed": nothing answers), a 502-504 (a server restarting), an engine still starting. A Python error
+   *  (500) is no such error. */
+  function transientError(e) {
+    if (!e) return false;
+    if (e instanceof TypeError || e.name === 'TypeError') return true;
+    if ([502, 503, 504].includes(+e.status)) return true;
+    return /failed to fetch|networkerror|load failed|network request failed|cannot reach|still starting|not started yet/i
+      .test(String(e.message || e));
+  }
+
+  /** #105 (D5): a computation the page asks by itself (Progress, Stats, the Review list, Listen's chips): call() again
+   *  after COMPUTE_RETRY_MS (0.8 s, then 2 s) while the error is transient, then {value, error} (error null on
+   *  success); never throws. opts.sleep(ms) and opts.waits for the tests. */
+  async function computeQuietly(call, opts) {
+    const o = opts || {}, waits = Array.isArray(o.waits) ? o.waits : COMPUTE_RETRY_MS;
+    const sleep = typeof o.sleep === 'function' ? o.sleep : (ms) => new Promise(r => setTimeout(r, ms));
+    for (let i = 0; ; i++) {
+      try { return {value: await call(), error: null}; }
+      catch (e) {
+        if (i >= waits.length || !transientError(e)) return {value: null, error: e || new Error('failed')};
+        await sleep(waits[i]);
+      }
+    }
+  }
+
+  /** #105 (D5): the grey note of a computation that failed after its retries (the page adds ↻ Try again; {again} is
+   *  that icon, L.iconHtml): on the PC (engine kind http) a TypeError is the server not answering (#105's screenshot
+   *  was a stopped server); else "<what> could not be computed just now.". */
+  function computeErrorNote(e, what, kind) {
+    if (kind === 'http' && e && (e instanceof TypeError || e.name === 'TypeError')) {
+      return "Meddeb's server is not answering: start it again, then {again}.";
+    }
+    return `${what || 'This'} could not be computed just now.`;
   }
 
   // ---------------------------------------------------------------- #39 the Review page (v0.16; U1.10, U1.20)
@@ -1316,14 +2046,52 @@
     const span = reviewSpanText(c, names);
     const n = Math.max(0, Math.round(+c.errors) || 0);
     const tag = REVIEW_TAGS[c.state] ? c.state : 'new';
+    // #103 (v0.22, plan D6): a join card names the openings it asks to tell apart
+    const sim = Array.isArray(c.similar) ? c.similar.length : 0;
+    // #116 (v0.23): a gap card (hole: its ayat) never tried wrong says no "0 mistakes" (its why says never recited)
+    const gap = Array.isArray(c.hole) && c.hole.length > 0 && n === 0;
     return {title: c.page ? `${span} · page ${c.page}` : span, span,
-      detail: [`${n} mistake${n === 1 ? '' : 's'}`, c.why ? String(c.why) : ''].filter(Boolean).join(' · '),
+      detail: [gap ? '' : `${n} mistake${n === 1 ? '' : 's'}`, c.why ? String(c.why) : '',
+        sim >= 2 ? `${sim} similar openings to tell apart` : ''].filter(Boolean).join(' · '),
       tag, tagText: REVIEW_TAGS[tag]};
+  }
+
+  /** #103 (v0.22, plan D6; user, 2026-11-02: "show 62 and ask for 63 then show 82 and ask for 83 and 84 then show 92 and
+   *  ask for 93 all three show in any order and if I pass all good"): a join card's run, the indices of its challenges
+   *  (card.similar) in today's order (card.join_order, else the mushaf's), then null (the card's own run, as any card)
+   *  when the card holds words outside its own challenge's opening (a word past the deciding word: the user's "review
+   *  cards are not only about mutashabihat"); [] for a card with fewer than 2 challenges (an ordinary card). */
+  function reviewJoinChain(card) {
+    const c = card || {}, sim = Array.isArray(c.similar) ? c.similar : [];
+    if (sim.length < 2) return [];
+    const o = Array.isArray(c.join_order) ? c.join_order.map(Number) : [];
+    const ok = o.length === sim.length && sim.every((_m, i) => o.includes(i));
+    const order = ok ? o : sim.map((_m, i) => i);
+    const own = sim.find(m => m && m.own);
+    const inOwn = (k) => {
+      if (!own || !Array.isArray(own.target)) return false;
+      const [s, a, i] = String(k).split(':').map(Number), [ts, a1, a2] = own.target.map(Number);
+      const key = Array.isArray(own.key) ? own.key.map(Number) : [];
+      return s === ts && a >= a1 && a <= a2 && (key[a - a1] == null || i <= key[a - a1]);
+    };
+    const rest = (Array.isArray(c.words) ? c.words : []).some(k => !inOwn(k));
+    return rest ? order.concat([null]) : order;
+  }
+
+  /** #116 (v0.23, D18; user 2026-11-04: "the limit of cards a day should be increased, default to 15, and have an input
+   *  about it in the settings"): Settings › Review › Cards a day, as recite/review.py daily_cards: a whole number 1-100
+   *  (a fraction rounded, out of range clamped), 15 when missing or not a number. */
+  const REVIEW_DAILY = 15;
+  function reviewDaily(v) {
+    if (v == null || typeof v === 'boolean' || (typeof v === 'string' && !v.trim())) return REVIEW_DAILY;
+    const x = Math.round(+v);
+    return Number.isFinite(x) ? Math.max(1, Math.min(100, x)) : REVIEW_DAILY;
   }
 
   /** #46 (user, 2026-10-26: "the review page did not change while I have quite some new errors done today"): the line
    *  under the counters from review_queue's today_mistakes {words, cards, one_more, not_learned, next_to_learn} and
-   *  counters.waiting; '' when there is nothing to say. */
+   *  counters.waiting; '' when there is nothing to say. #116 (v0.23): the day's caps from review_queue's caps
+   *  {cards, new} (15 / 5 by default). */
   function reviewTodayText(q) {
     const t = (q && q.today_mistakes) || {}, c = (q && q.counters) || {};
     const n = (v) => Math.max(0, Math.round(+v) || 0);
@@ -1335,7 +2103,8 @@
       if (n(t.not_learned)) parts.push(`${n(t.not_learned)} in ayat not learned yet`);
       if (n(t.next_to_learn)) parts.push(`${n(t.next_to_learn)} on the page you are learning`);
     }
-    if (n(c.waiting)) parts.push(`${n(c.waiting)} more card${n(c.waiting) === 1 ? ' waits' : 's wait'} for the next days (10 a day, 3 of them new)`);
+    const caps = (q && q.caps) || {}, cards = n(caps.cards) || REVIEW_DAILY, fresh = n(caps.new) || Math.ceil(cards * 3 / 10);
+    if (n(c.waiting)) parts.push(`${n(c.waiting)} more card${n(c.waiting) === 1 ? ' waits' : 's wait'} for the next days (${cards} a day, ${fresh} of them new)`);
     return parts.join(' · ');
   }
 
@@ -1358,6 +2127,23 @@
   function reviewWaitText(cards) {
     const at = (Array.isArray(cards) ? cards : []).map(c => c && c.wait_until).filter(Boolean).map(String).sort();
     return at.length ? `Next card at ${at[0]}` : 'No other card due today.';
+  }
+
+  /** #115 (v0.23, D4; user, 2026-11-04: "same for the review mode i want to reach it in an easier manner more smoother,
+   *  suggest something … as a button in the bottom menu?"): the cards button left of the speaker, from review_queue's
+   *  answer q: {show, count (the cards ready now: due today, not waiting for a retry), text (its badge: "3", "99+"),
+   *  card (the first of them in the round's order: what a tap starts, as Start in the list), title}. Shown only where
+   *  the engine has the review (features.review), a card is ready, the microphone is off and no card runs, never with
+   *  the panel or Listen's row: hidden, never disabled (#105). o = {features, running, paused, searching, starting,
+   *  card, panel, bar, pending (v0.23 review: a press waiting for the speech model, as speakerButton)}. */
+  function reviewButtonView(q, o) {
+    o = o || {};
+    const ready = (q && Array.isArray(q.cards) ? q.cards : []).filter(c => c && !c.wait_until);
+    const n = ready.length;
+    const show = reviewOn(o.features) && n > 0 && !o.card && !o.panel && o.bar !== 'listen'
+      && !o.searching && !o.starting && !o.pending && !(o.running && !o.paused);
+    return {show, count: n, text: n > 99 ? '99+' : String(n), card: ready[0] || null,
+      title: `Review: ${n} card${n === 1 ? '' : 's'} ready — tap: the first one; long press: the Review list`};
   }
 
   /** #49 (user, 2026-10-27: "I just wanted to stop the mic don't tell me my mistake"): ■ (the button, S, the voice
@@ -1416,6 +2202,81 @@
       : {filled: false, action: 'skip', label: 'Next', title: "Skip this card for now: it comes back at the end of today's round"};
   }
 
+  /** #106 (v0.23, D8; user, 2026-11-03: "after the finish of a review whether by mic recitation or by next button, any
+   *  of them reaching the objective, there is no more finish button but it jumps automatically"): does the card's
+   *  attempt stop now (■: the session saved, then its result)? o = {phase, filled (reviewNextState's: the target's last
+   *  word read, aloud or in the mind: the microphone, ◂, a long press, a practice's ↻, a join step's), live (its
+   *  session runs or is paused), stopping (■ already under way), fired (it already stopped this attempt)}. */
+  function reviewAutoFinish(o) {
+    o = o || {};
+    return o.phase === 'running' && !!o.filled && !!o.live && !o.stopping && !o.fired;
+  }
+
+  /** #106 (v0.23, D8): when the card comes back, from review_result's answer r (B3.16: wait_min, due_days, next_due,
+   *  why): 'in 40 min' (a retry today, after its wait), 'today' (ready again), 'tomorrow', 'in 5 days', 'suspended',
+   *  'not counted' (a Hidden practice), 'no more reviews' (no card any more); an engine without due_days: 'on 9 Nov
+   *  2026'. */
+  function reviewAgainText(r) {
+    r = r && typeof r === 'object' ? r : {};
+    const why = String(r.why || '');
+    if (why === 'Suspended') return 'suspended';
+    if (why.startsWith('Practice (Hidden)')) return 'not counted';
+    if (r.next_due == null) return 'no more reviews';
+    if (+r.wait_min >= 1) return `in ${Math.ceil(+r.wait_min)} min`;
+    const d = r.due_days == null || r.due_days === '' || !Number.isFinite(+r.due_days) ? null : Math.round(+r.due_days);
+    if (r.next_due === 'today' || d === 0) return 'today';
+    if (d === 1) return 'tomorrow';
+    if (d != null && d > 1) return `in ${d} days`;
+    const day = dayText(r.next_due);
+    return day ? `on ${day}` : '';
+  }
+
+  /** #106 (v0.23, D8; user, 2026-11-03: "I directly get a nice 'tick 2:63, review again in 5 days' 'Next card' …
+   *  you change the text 'X 2:63, review again in 40 min'"): review_result's answer r for the card's target {surah,
+   *  from, to} (absent: from r's target ayat) -> {label: [line 1 '✓ 2:63-65' | '✗ 2:63, 65', line 2 the
+   *  reviewAgainText], toast: '✓ 2:63, review again in 5 days' · '✗ 2:63, 65 · review again tomorrow' (several ✗:
+   *  a middle dot, the comma is taken) · '✓ 2:63-65, no more reviews' · '✓ 2:63, practice (Hidden): not counted'}.
+   *  A Hidden practice read without a ✗ is ✓ (it is not counted, #73: the engine's passed is false). */
+  function reviewResultText(r, target) {
+    r = r && typeof r === 'object' ? r : {};
+    const ayat = (Array.isArray(r.ayat) ? r.ayat : []).filter(a => a && a.role !== 'runup');
+    let t = target && target.surah != null ? target : null;
+    if (!t) {
+      const ns = ayat.map(a => +a.ayah);
+      t = {surah: ayat.length ? ayat[0].surah : '', from: ns.length ? Math.min(...ns) : '', to: ns.length ? Math.max(...ns) : ''};
+    }
+    const again = reviewAgainText(r), bad = ayat.filter(a => !a.ok).map(a => +a.ayah);
+    const ok = !!r.passed || (again === 'not counted' && ayat.length > 0 && !bad.length);
+    const span = +t.from === +t.to ? `${t.surah}:${t.from}` : `${t.surah}:${t.from}-${t.to}`;
+    const head = ok ? `✓ ${span}` : `✗ ${t.surah}:${(bad.length ? bad : [t.to]).join(', ')}`;
+    const tail = again === 'not counted' ? 'practice (Hidden): not counted'
+      : ['suspended', 'no more reviews', ''].includes(again) ? again : `review again ${again}`;
+    return {label: [head, again], toast: tail ? head + (head.includes(',') ? ' · ' : ', ') + tail : head};
+  }
+
+  /** #106 (v0.23, D8): a mark after the result asked review_result again (old -> now answers): 'Changed: ✗ 2:63,
+   *  review again in 40 min' when the ✓ / ✗ or when the card comes back changed; null when they did not (a wait
+   *  counts as the same however many minutes are left: the clock moves between two answers). */
+  function reviewFlipText(old, now, target) {
+    if (!old || !now || typeof old !== 'object' || typeof now !== 'object') return null;
+    const a = reviewResultText(old, target), b = reviewResultText(now, target);
+    const kind = (r) => +r.wait_min >= 1 ? 'wait' : reviewAgainText(r);
+    if (a.label[0] === b.label[0] && kind(old) === kind(now)) return null;
+    return 'Changed: ' + b.toast;
+  }
+
+  /** #106 (v0.23, D8): is a mark on `word` ({surah, ayah}) one that changes the card's result? Only after the result
+   *  (phase 'result', its answer there or still being checked), on a word of the card's graded ayat (`card` = {surah,
+   *  from: the run-up's first ayah, to: the target's last}; a join step: its member's), and, when `folder` (the card's
+   *  saved session) is given, with that session on screen (`session`: the folder the mark names). */
+  function reviewRegradeNeeded(o) {
+    o = o || {};
+    const w = o.word || {}, c = o.card || {};
+    if (o.phase !== 'result' || w.surah == null || c.surah == null) return false;
+    if (o.folder != null && o.session !== o.folder) return false;
+    return +w.surah === +c.surah && +w.ayah >= +c.from && +w.ayah <= +c.to;
+  }
+
   /** #55 / #57 (user, 2026-10-28/29: "keep it in one location"; "the row of review button, from left to right, should
    *  contain: X … restart … 'Recite until 2:65' … skip (sur fond blanc) … finish (sur fond vert) … next card … the help
    *  button … next to the help button … a play segment button"): the card's row as 7 fixed slots, always the same and
@@ -1427,7 +2288,7 @@
    *  while it is computed), target {surah, from, to}, playing (the segment's ▶ holds the player), paused (#83: the
    *  player paused from outside: ▶, a press resumes), why (the 'short' reason),
    *  saving (page review 2026-10-29: ■ pressed, Finish's save under way: drawn as 'leaving', nothing invites a press)}
-   *  -> {slots: [{k, text, on, cls?, title}]}. */
+   *  -> {slots: [{k, text, on, cls?, title}]} (#106, v0.23: the result's label has a second line, `sub`). */
   function reviewRowView(o) {
     o = o || {};
     const t = o.target || {}, raw = String(o.phase || '');
@@ -1435,17 +2296,23 @@
     const phase = live0 && o.saving ? 'leaving' : raw, r = phase === 'result' ? (o.result || null) : null;
     const checking = phase === 'result' && !r;
     let label = {text: '', title: ''};   // #82: the target is no longer named while the card runs
+    // #103 (v0.22, D6): a join chain's step ("1 of 3") while its challenge runs
+    const ch = o.chain && +o.chain.n > 1 ? o.chain : null;
+    if (ch && live0) label = {text: `${+ch.step + 1} of ${+ch.n}`, title: 'Similar openings: one challenge after the other, in a new order each day'};
     let main = {text: 'Skip', cls: 'skip', on: phase === 'running',
       title: "Skip this card for now: the next card opens; this one comes back at the end of today's round"};
-    if (live0 && o.filled) main ={text: 'Finish', cls: 'finish', on: phase === 'running', title: 'The card is done: stop and see the result'};
+    // #106 (v0.23, D8; user, 2026-11-03: "there is no more finish button but it jumps automatically"): no Finish: once
+    // the target is read the card ends by itself (L.reviewAutoFinish); meanwhile, while it is saved (Saving…) and
+    // checked (Checking…), the main slot is the Next card to come, greyed (nothing changes width)
+    const ending = {text: 'Next card', cls: 'nextcard', on: false, title: 'The card ends by itself: its result comes'};
+    if (live0 && o.filled) main = ending;
     if (phase === 'leaving') label = {text: 'Saving…', title: ''};
-    else if (checking) { label = {text: 'Checking…', title: ''}; main = {text: 'Finish', cls: 'finish', on: false, title: ''}; }
+    else if (checking) { label = {text: 'Checking…', title: ''}; main = ending; }
     else if (r) {
-      const v = reviewResultView(r), target = v.ayat.filter(a => !a.runup);
-      const bad = target.filter(a => !a.ok).map(a => a.text.split(':')[1]);
-      const span = t.from === t.to ? `${t.surah}:${t.from}` : `${t.surah}:${t.from}-${t.to}`;
-      label = {text: v.passed ? `✓ ${span}` : `✗ ${t.surah}:${(bad.length ? bad : [t.to]).join(', ')}`,
-        title: [v.head, v.ayat.map(a => `${a.text} ${a.ok ? '✓' : '✗'}${a.runup ? ' (run-up)' : ''}`).join(', '), v.why, v.due]
+      // #106 (v0.23, D8): two lines, "✓ 2:63" / "in 5 days" (L.reviewResultText); the whole sentence in the tooltip
+      const v = reviewResultView(r), x = reviewResultText(r, t);
+      label = {text: x.label[0], sub: x.label[1],
+        title: [x.toast, v.ayat.map(a => `${a.text} ${a.ok ? '✓' : '✗'}${a.runup ? ' (run-up)' : ''}`).join(', '), v.why, v.due]
           .filter(Boolean).join(' · ')};
       main = {text: 'Next card', cls: 'nextcard', on: true, title: "The next card of today's round"};
     } else if (phase === 'short') {
@@ -1482,7 +2349,18 @@
     const method = (Array.isArray(h.method) ? h.method : []).filter(Boolean).map(t => ({text: String(t)}));
     const sources = (Array.isArray(h.sources) ? h.sources : []).filter(x => x && x.url)
       .map(x => ({text: String(x.title || x.url), href: String(x.url)}));
+    // #103 (v0.22, D6): a join card's panel (review_help{joins}): the group, where the openings split (the deciding word
+    // marked: segments [{text, key}]), what was said in each challenge
+    const group = h.group ? [{text: String(h.group)}] : [];
+    const split = (Array.isArray(h.split) ? h.split : []).filter(r => r && r.text).map(r => ({text: String(r.text),
+      depth: Math.max(0, Math.round(+r.depth) || 0),
+      segments: (Array.isArray(r.segments) ? r.segments : []).map(x => ({text: String(x.text || ''), key: !!x.key})),
+      ayat: (Array.isArray(r.ayat) ? r.ayat : []).map(String)}));
+    const members = (Array.isArray(h.members) ? h.members : []).filter(x => x && x.text).map(x => ({text: String(x.text)}));
     return [words.length ? {title: 'What went wrong', items: words} : null,
+      group.length ? {title: 'Similar openings', items: group} : null,
+      split.length ? {title: 'Where they split', items: split} : null,
+      members.length ? {title: 'Your answers', items: members} : null,
       method.length ? {title: 'How to learn it', items: method} : null,
       sources.length ? {title: 'Why this works', items: sources} : null].filter(Boolean);
   }
@@ -1748,18 +2626,21 @@
   // ---------------------------------------------------------------- U1.13 one bar for Recite and Listen (user, 2026-10-04)
   const LISTEN_ON = new Set(['playing', 'loading', 'paused']);
 
-  /** Which buttons the bottom bar shows: 'listen' (the microphone is ▶ play / ❚❚ pause, the search button ■ stop) in the
-   *  Listen view and wherever a Listen playback is on; 'recite' otherwise (microphone / search, or a session's pause /
-   *  stop: a recitation keeps priority). ctx = {status, source (listen_state.source: the car's Recite is 'recite', not
-   *  a Listen playback), running, starting, searching, view, mode (the text mode), seen (the page saw this playback
+  /** Which buttons the bottom bar shows: 'listen' (Listen's row: its chip, ❚❚ / ▶ and ■; #115, v0.23, D3: the microphone
+   *  stays a microphone beside it) wherever a Listen playback is on; 'recite' otherwise (the microphone, or a session's:
+   *  a recitation keeps priority). ctx = {status, source (listen_state.source: the car's Recite is 'recite', not
+   *  a Listen playback), running, starting, searching, mode (the text mode), seen (the page saw this playback
    *  play since it last came to the front)}.
    *  Issue #19 (user, 2026-10-16/17, D4): outside the Listen view, Hidden and Blind are always Recite's ("if someone
    *  select blind then automatically it is recite mode"), and a paused playback the page never saw play (the car, the
-   *  notification, Meddeb started or brought back) leaves the bar to Recite. */
+   *  notification, Meddeb started or brought back) leaves the bar to Recite.
+   *  v0.22 (#98 D11; user, 2026-11-01: "… closed the review with the X then listen … I still see two buttons: stop in
+   *  red and mic … fix the buttons"): the Listen view's bar is always Listen's, a recitation running or not (its ▶
+   *  saves the recitation first: onPlayClick); elsewhere a recitation keeps priority. #115 (v0.23, D3): no Listen view
+   *  any more (its panel opens in Recite, over a recitation's bar never): a recitation keeps priority everywhere. */
   function barMode(ctx) {
     ctx = ctx || {};
     if (ctx.running || ctx.starting || ctx.searching) return 'recite';
-    if (ctx.view === 'listen') return 'listen';
     if (!LISTEN_ON.has(ctx.status) || ctx.source === 'recite') return 'recite';
     if (ctx.mode === 'hide' || ctx.mode === 'blind') return 'recite';
     if (ctx.status === 'paused' && ctx.seen !== true) return 'recite';
@@ -1771,11 +2652,13 @@
     return mode !== 'show' && LISTEN_ON.has(status) && source !== 'recite';
   }
 
-  /** The listen bar for a player status: the microphone button's icon and tooltip, and whether ■ stop shows. */
-  function listenBar(status) {
-    if (status === 'playing' || status === 'loading') return {start: 'pause', title: 'Pause', stop: true};
-    if (status === 'paused') return {start: 'play', title: 'Resume', stop: true};
-    return {start: 'play', title: 'Play the range', stop: false};
+  /** #115 (v0.23, D3) + #101 (D2: ▶ ❚❚ ■ only beside a speaker): Listen's row for a player status, its own buttons
+   *  beside the now-playing chip, never the microphone's: {pause (the ICON key of #lPause: ❚❚ while it plays, ▶ while
+   *  paused), title, stop (■ shows)}. */
+  function listenRow(status) {
+    if (status === 'playing' || status === 'loading') return {pause: 'pause', title: 'Pause the reciter', stop: true};
+    if (status === 'paused') return {pause: 'play', title: 'Resume the reciter', stop: true};
+    return {pause: 'play', title: 'Play', stop: false};
   }
 
   /** U1.13 (user, 2026-10-04): the mushaf follows the ayah being played, only when the clip changes (a page turned by
@@ -2088,6 +2971,57 @@
         return out('tap');
       default: return out('none');
     }
+  }
+
+  /** #62 (v0.23, D12; user, 2026-11-04: "double clicking in between does not work and sliding 2 words switches to the
+   *  next page XD so what do you suggest as a safer gesture to insert between words?"): a long press on a word toggles
+   *  the insertion before it. state = {phase: 'idle' | 'armed' | 'held', x, y, k, swallow}; ev = {type: 'down' (x, y,
+   *  k: the word's page index; null: off the words) | 'timer' (LONG_PRESS_MS after 'arm') | 'move' (x, y) | 'up' (x, y)
+   *  | 'cancel' | 'click'}. Returns {state, action}: 'arm' (start the timer), 'disarm' (a tap or a scroll before the
+   *  timer: clear it, nothing else), 'held' (the timer: the buzz and the pale ⚡ say "let go"), 'commit' (released after
+   *  'held' within LONG_PRESS_SLOP px of where it came down: toggle the insertion before k), 'drop' (after 'held' a move
+   *  of more than LONG_PRESS_SLOP px, a release that far, or a cancel: the browser's pan; nothing marked), 'swallow'
+   *  (the click that ends a commit or a drop, once), 'tap' (any other click: the word's own) or 'none'. It commits on
+   *  the release, never at 500 ms: a finger that rests before it scrolls drops it. A new 'down' forgets a click that
+   *  never came (Chrome on Android sends none after a long press). */
+  function holdStep(state, ev) {
+    const s = Object.assign({phase: 'idle', swallow: false}, state || {});
+    ev = ev || {};
+    const out = (action) => ({state: s, action});
+    const far = () => ev.x != null && ev.y != null && Math.hypot((+ev.x || 0) - s.x, (+ev.y || 0) - s.y) > LONG_PRESS_SLOP;
+    const end = (action) => { const was = s.phase; s.phase = 'idle'; if (was === 'held') s.swallow = true; return out(action); };
+    switch (ev.type) {
+      case 'down':
+        s.swallow = false;
+        if (ev.k == null) { s.phase = 'idle'; s.k = null; return out('none'); }
+        Object.assign(s, {phase: 'armed', x: +ev.x || 0, y: +ev.y || 0, k: +ev.k});
+        return out('arm');
+      case 'timer':
+        if (s.phase !== 'armed') return out('none');
+        s.phase = 'held'; return out('held');
+      case 'move':
+        if (s.phase === 'idle' || !far()) return out('none');
+        return end(s.phase === 'armed' ? 'disarm' : 'drop');
+      case 'up':
+        if (s.phase === 'idle') return out('none');
+        return end(s.phase === 'armed' ? 'disarm' : far() ? 'drop' : 'commit');
+      case 'cancel':
+        if (s.phase === 'idle') return out('none');
+        return end(s.phase === 'armed' ? 'disarm' : 'drop');
+      case 'click':
+        if (s.swallow) { s.swallow = false; return out('swallow'); }
+        return out('tap');
+      default: return out('none');
+    }
+  }
+
+  /** #62 (D12): the toast of a long press's toggle: the gap's own (doubleTapStep{ins}), its undo said as the gesture
+   *  that made it ("long press again"); o.masked (Hidden's grey block, a bar: groupSpan draws no ⚡ there): an insertion
+   *  marked says where it went ("Insertion marked before a hidden word"). */
+  function holdToast(toast, o) {
+    let t = String(toast == null ? '' : toast).replace(/double tap again/g, 'long press again');
+    if (o && o.masked) t = t.replace(/^Marked as an insertion/, 'Insertion marked before a hidden word');
+    return t;
   }
 
   /** D11: the summary box's bottom row ◀ older session · ↺ Reset · ▶ newer session, from the session's nav{older, newer,
@@ -2441,22 +3375,30 @@
 
   const api = {isMistake, sessionRemoveAction, lastOutcome, removeLabel, stateAfterMark, historyAfterMark, markWhen, swipePage,
     pullDown, pullUp, starterHintAvailable, starterHintLines, cueStarterHint,
+    PULL_NEXT_PX, pullNext, pressOnScrollbar, turnLanding, nextStrip, peekLines, holdStep, holdToast,
     reviewOn, reviewCounters, reviewCardView, reviewCueKeys, reviewTargetLast, reviewNextState, reviewResultView,
-    reviewSpanText, reviewTodayText, reviewNextCardOf, reviewWaitText, cardStopAction, silentReveal, revealOutside, hintsRead, modeMsg,
+    reviewAutoFinish, reviewAgainText, reviewResultText, reviewFlipText, reviewRegradeNeeded, skipMark, ayahLink, ayahLinkText,
+    reviewSpanText, reviewTodayText, REVIEW_DAILY, reviewDaily, reviewNextCardOf, reviewWaitText, cardStopAction, silentReveal, revealToGroup, revealOutside, revealFloor, surahPickWins, hintsRead, hiddenCorrectRefused, sessionReadIt, modeMsg,
     DOUBLE_TAP_MS, POP_DELAY_MS, wordTapStep, contextMistake, doubleTapStep, labelState, historyState, aiNature, plainState,
     settledState,
-    startAyah,
-    DEFAULT_SORT, normalizeSortState, nextSortState, sortProgressRows, progressSurahLabels, daysAgoText,
-    statusLabel, summaryVerdict, shownHeard, readingText, insLines, insView, gapAt, wordAt, shouldFollowCursor, isOutsideTap,
+    startAyah, searchStart, foundText, MIC_TITLE, MIC_OFF_TITLE, SEARCH_OFF_TITLE, micButton, keysLikely, shortcutKey,
+    dropKeyHints, iconTokens, iconHtml, micPressAction, searchPlacesView, searchGivesUp, groupDoneText, cardPassText, cardsPassText,
+    RECORDINGS_KEEP, recordingsKeepDays, reviewJoinChain,
+    DEFAULT_SORT, normalizeSortState, nextSortState, sortProgressRows, progressSurahLabels, progressGaps, learnedPie, daysAgoText,
+    statusLabel, summaryVerdict, shownHeard, readingText, insLines, insView, gapAt, wordAt, DRAG_FLICK_MS, DRAG_CLICK_MS, DRAG_MIN_PX, dragInsertAt, shouldFollowCursor, isOutsideTap,
     mergeIndexMap,
     LISTEN_DEFAULT, RECITER_IDS, reciterOptions, clampListenForm, listenParams, playsText, listenFormFromTarget, nowPlayingText, linkLicenceFiles, centreLines,
     listenOptionsOn, listenPlayOptions, mulberry32, passShape, marginSteps, passClips, fadeVolume, migrateListenForm,
+    mixIndex, passClip, passPlan, clipSrc,
     listenEstimate, formatDuration, listenDurationText,
-    modelStep, modelDownloadView, toastMs, readingMs, statsSeriesSince, statsWindowSeries, statsWindowSlope, reviewRowView, reviewSegment, reviewHelpBlocks, adoptsCarSession, startAfterModel, startPlan, wordVisible, modeChangeEffect, levelClass, newLearnedLine, statsTodayLines,
-    progressChecks, dayText, averageWindowText, slopeText, finishText, PACE_WINDOWS, normalizePaceWindow, detectionLines,
+    modelStep, modelDownloadView, toastMs, readingMs, statsSeriesSince, statsWindowSeries, statsWindowSlope, reviewRowView, reviewSegment, reviewHelpBlocks, adoptsCarSession, startAfterModel, startPlan, wordVisible, modeChangeEffect, levelClass, newLearnedLine, toFixLine, statsTodayLines,
+    progressChecks, learnLockReason, progressFresh, progressLines, progressGuide,
+    COMPUTE_RETRY_MS, transientError, computeQuietly, computeErrorNote, dayText, averageWindowText, slopeText, finishText, PACE_WINDOWS, normalizePaceWindow, detectionLines,
     paceWindowText, paceLines, averageLines, STATS_LINES, STATS_CHART, statsChartSvg,
     statsPointAt, statsPointText, LISTEN_ON, barMode, modeStopsListen,
-    listenBar, listenFollow,
+    listenRow, listenFollow, speakerButton, reviewButtonView, playingHas,
+    listenFormFromPage, listenPreviewTarget, followRangeEnd, inListenRange, listenPanelClose, playsOptions, listenLengthText, listenChipText,
+    quickChips, quickChipView,
     versionsText, FITS, FONT_MAX, normalizeFit, nextFit, fitInfo, fitFont, textWidthCap, pinchFont, voiceAction, cueSteps,
     revealedRange, revealIndices, revealScroll, joinsPrevious, writtenGroups, writtenText, groupView,
     confirming, unsaidMistake, placeholderKind, ayahMarkerShown, ayahMarkerText, sessionOutcome, wordState, sessionRevealMsg, barSignals,

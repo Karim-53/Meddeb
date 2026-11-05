@@ -167,8 +167,10 @@ Contents
 - Licence text: none bundled; CC BY-NC 2.5 Canada: https://creativecommons.org/licenses/by-nc/2.5/ca/
   (archived licence page:
   http://web.archive.org/web/20121021062917/http://www.versebyversequran.com/site/license)
-- Notes: credit shown in Listen: "Recitation: Yasser Al-Dossary — audio files: EveryAyah.com". The files
-  are not re-hosted; re-hosting them would need the rights holders' permission.
+- Notes: credit shown in Listen until v0.20: "Recitation: Yasser Al-Dossary — audio files: EveryAyah.com"; since
+  v0.21 Listen plays his QuranicAudio surah files (the entry below) and these files only when one fails, while the
+  voice commands, the Recite cue and the car's travel dua keep them. The files are not re-hosted; re-hosting them
+  would need the rights holders' permission.
 
 ### Recitation by Yasser Salamah (EveryAyah.com)
 
@@ -184,9 +186,11 @@ Contents
 - Licence text: none bundled; CC BY-NC 2.5 Canada: https://creativecommons.org/licenses/by-nc/2.5/ca/
   (archived licence page:
   http://web.archive.org/web/20121021062917/http://www.versebyversequran.com/site/license)
-- Notes: credit shown in Listen: "Recitation: Yasser Salamah — audio files: EveryAyah.com" (Listen's menu says
-  "Yasser Salamah (Hadr)", the user's wording; EveryAyah names the folder "Yaser Salamah"). The files are not
-  re-hosted; re-hosting them would need the rights holders' permission.
+- Notes: credit shown in Listen until v0.21: "Recitation: Yasser Salamah — audio files: EveryAyah.com" (EveryAyah
+  names the folder "Yaser Salamah"; it is his murattal, his Hadr is the archive.org entry below). Since v0.22 the
+  select's "Yasser Salamah (Hadr)" plays the archive.org entry below and these files only where a surah has no Hadr
+  times or a Hadr file fails, named "Recitation: Yasser Salamah (murattal) — audio files: EveryAyah.com". The files
+  are not re-hosted; re-hosting them would need the rights holders' permission.
 
 ### Recitation by Mishary Alafasy (EveryAyah.com)
 
@@ -224,6 +228,106 @@ Contents
   cover picture, which Meddeb does not show. The files are not re-hosted; re-hosting them would need the
   rights holders' permission.
 
+### Recitation by Abdul-Rahman Al-Sudais (EveryAyah.com)
+
+- Version: one MP3 file per ayah, 64 kbps (folder Abdurrahmaan_As-Sudais_64kbps, 6,236 ayat)
+- SPDX: NOASSERTION. EveryAyah's surah archives say that the files may be used only under the licence of
+  VerseByVerseQuran.com; the archived copy of that licence (2012) is CC BY-NC 2.5 Canada.
+- Copyright: recitation by Abdul-Rahman Al-Sudais; files published by EveryAyah.com (VerseByVerseQuran.com)
+- Source: https://everyayah.com/data/Abdurrahmaan_As-Sudais_64kbps/ (served through the BunnyCDN network)
+- Ships in: not in the APK nor in any Meddeb repository. Android app, downloaded: Listen, when this reciter is
+  chosen (or plays in Mix), stores the ayat it plays in the app's own storage, for the user's own offline
+  listening. PC app and web app: played from EveryAyah directly (the browser may cache them).
+- Licence text: none bundled; CC BY-NC 2.5 Canada: https://creativecommons.org/licenses/by-nc/2.5/ca/
+  (archived licence page:
+  http://web.archive.org/web/20121021062917/http://www.versebyversequran.com/site/license)
+- Notes: credit shown in Listen: "Recitation: Abdul-Rahman Al-Sudais — audio files: EveryAyah.com". The files
+  are not re-hosted; re-hosting them would need the rights holders' permission.
+
+### Recitation by Yasser Al-Dossary (QuranicAudio.com)
+
+- Version: one MP3 file per surah, 128 kbps CBR (folder yasser_ad-dussary, 114 files), the same recording as
+  EveryAyah's per-ayah files (cross-correlation 0.98-0.995) without their periodic ticks (#92)
+- SPDX: NOASSERTION. QuranicAudio.com publishes the files for listening and download and states no licence.
+- Copyright: recitation by Yasser Al-Dossary; files published by QuranicAudio.com (the files Quran Android plays)
+- Source: https://download.quranicaudio.com/quran/yasser_ad-dussary/SSS.mp3
+- Ships in: not in the APK nor in any Meddeb repository. Android app, downloaded: Listen, Review's play and the
+  car play time ranges of these files (one per ayah, D4.10) and keep what they fetch in the app's own storage, for
+  the user's own offline listening. PC app and web app: streamed from QuranicAudio directly (the browser may cache
+  them). When a file cannot be fetched, the ayah plays from EveryAyah (the entry above).
+- Licence text: none bundled (none published)
+- Notes: credit shown in Listen: "Recitation: Yasser Al-Dossary — audio files: QuranicAudio.com (EveryAyah.com as
+  the fallback)". Since v0.22 (#92) the files of 21 surahs are known to tick too (D4.12): their ticked ayat are
+  never played (the archive.org entry below plays those surahs). The files are not re-hosted; re-hosting them would
+  need the rights holders' permission.
+
+### Recitation by Yasser Al-Dossary (archive.org)
+
+- Version: one MP3 file per surah, 192 kbps (item YASSER_AL-DOSSARI_MP3_QURAN, 114 files, "المصحف المرتل",
+  uploaded in 2010 from mp3quran.net): another murattal recording of his, without the ticks of the files above
+- SPDX: NOASSERTION. The archive.org item is a user upload and states no licence; mp3quran.net states none either.
+- Copyright: recitation by Yasser Al-Dossary; files published by mp3quran.net, uploaded to archive.org
+- Source: https://archive.org/download/YASSER_AL-DOSSARI_MP3_QURAN/SSS.mp3
+- Ships in: not in the APK nor in any Meddeb repository. Listen plays time ranges of these files (Meddeb's own ayah
+  times, recite/data/yasser_clean_timings.json.gz) for the surahs whose QuranicAudio file ticks (D4.12, #92);
+  Android keeps what it fetches in the app's own storage, for the user's own offline listening; PC app and web app:
+  streamed from archive.org directly.
+- Licence text: none bundled (none published)
+- Notes: credit shown in Listen: "his recording on archive.org (mp3quran.net) where QuranicAudio's files tick",
+  after the QuranicAudio credit above. The files are not re-hosted; re-hosting them would need the rights holders'
+  permission.
+
+### Recitation by Islam Sobhi (mp3quran.net)
+
+- Version: one MP3 file per surah; Meddeb plays Maryam (19), https://cdn.mp3quran.net/audio/islam-sobhi/r1/019.mp3
+- SPDX: NOASSERTION. mp3quran.net publishes the files for listening and download and states no licence.
+- Copyright: recitation by Islam Sobhi; file published by mp3quran.net
+- Source: https://cdn.mp3quran.net/audio/islam-sobhi/r1/019.mp3
+- Ships in: not in the APK nor in any Meddeb repository. Listen's "Meddeb selection" plays time ranges of this
+  file (Meddeb's own ayah times, D4.11); Android keeps what it fetches in the app's own storage, for the user's own
+  offline listening; PC app and web app: streamed from mp3quran.net directly.
+- Licence text: none bundled (none published)
+- Notes: credit shown in Listen: "Recitation (Meddeb selection): Islam Sobhi (mp3quran.net)", with the selection's
+  other sources. The file is not re-hosted; re-hosting it would need the rights holders' permission.
+
+### Recitation by Yasser Salamah, Hadr (archive.org)
+
+- Version: one MP3 file per surah, 64 kbps CBR, all 114 surahs (TvQuran.com's copy, item nordarby_20150917_1806,
+  since v0.22); the same recordings as the islamway.net / TVQuran.com files the user named. Until v0.21 Meddeb played
+  Taha, Yasin and Ar-Rahman from a 32 kbps transcode of them,
+  https://archive.org/download/002l_2020qerqqeeeeeeeeeqeewe/ (020L.mp3, 036L.mp3, 055L.mp3)
+- SPDX: NOASSERTION. The archive.org items are user uploads and state no licence.
+- Copyright: recitation by Yasser Salamah (Hadr); files published by TvQuran.com, uploaded to archive.org
+- Source: https://archive.org/download/nordarby_20150917_1806/SSS.mp3
+- Ships in: not in the APK nor in any Meddeb repository. Listen's "Yasser Salamah (Hadr)", Mix and the "Meddeb
+  selection" play time ranges of these files (Meddeb's own ayah times, D4.11); Android keeps what it fetches in the
+  app's own storage, for the user's own offline listening; PC app and web app: streamed from archive.org directly.
+  When a file cannot be fetched, the ayah plays from EveryAyah's Yaser_Salamah_128kbps (his murattal, the entry
+  above).
+- Licence text: none bundled (none published)
+- Notes: credit shown in Listen: "Recitation: Yasser Salamah (Hadr) — audio files: archive.org (TvQuran.com)"; in the
+  Meddeb selection "Recitation (Meddeb selection): Yasser Salamah, Hadr (archive.org)", with the selection's other
+  sources. The files are not re-hosted; re-hosting them would need the rights holders' permission.
+
+### Recitation by Yasser Al-Dossary, Al-Fatiha in maqam Kurd (Meddeb's site)
+
+- Version: one MP3 file, 128 kbps, 43.17 s: Al-Fatiha 1:2-1:7 in maqam Kurd and the Aameen after it, cut by the user
+  from the video "10 Maqams Surah Fatiha Sheikh Yasser al Dosari" (268-311 s). Since Meddeb 0.23 (#112) the file
+  audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd_v2.mp3: the same clip re-encoded with its level changed (+4 dB
+  throughout, +3 dB more on the start of 1:2, easing out by 5 s), nothing cut or added; the Aameen is now kept at the
+  end of 1:7 (the user's request), where 0.22 left it out.
+- SPDX: NOASSERTION. The video states no licence.
+- Copyright: recitation by Yasser Al-Dossary
+- Source: https://karim-53.github.io/Meddeb/audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd_v2.mp3 (Meddeb 0.22:
+  audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd.mp3, the clip before the change)
+- Ships in: the web repository (Meddeb's site: audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd.mp3, published there by the
+  user, #93, kept for 0.22 installs; audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd_v2.mp3, #112); not in the APK.
+  Listen's "Meddeb selection" plays time ranges of it (hand-checked ayah cuts in recite/data/selection_timings.json);
+  Android keeps it in the app's own storage once fetched.
+- Licence text: none bundled (none published)
+- Notes: credit shown in Listen: "Recitation (Meddeb selection): Yasser Al-Dossary, maqam Kurd (Meddeb's site)",
+  with the selection's other sources.
+
 ### Word timings of the recitation by Yasser Al-Dossary (yasser_word_timings.json.gz)
 
 - Version: format 1, computed in October 2026 by tools/build_word_timings.py over the 6,236 files of
@@ -244,6 +348,36 @@ Contents
   Al-Dossary — audio files: EveryAyah.com", VerseByVerseQuran.com). The QDC (quran.com) and QUL segments
   used only to calibrate the boundary rule are not shipped (Quran Foundation developer terms; no stated
   licence).
+
+### Ayah timings of the recitation by Yasser Al-Dossary in QuranicAudio's files (yasser_qa_timings.json.gz)
+
+- Version: format 1, built on 2026-11-01 by tools/build_qa_timings.py (D4.10, #92)
+- SPDX: NOASSERTION (converted from Quran Android's timings database, which states no licence)
+- Copyright: the ayah and word times of Quran Android (quran.com's Android app) for Yasser Al-Dossary's
+  QuranicAudio files; 13 wrong ayah times corrected by rule by Meddeb
+- Source: https://files.quran.app/hafs/databases/audio/yasser_dussary.zip (SQLite table timings), converted by
+  tools/build_qa_timings.py (source repository); the files' lengths from QuranicAudio's headers
+- Ships in: Android app and web app (recite/data/yasser_qa_timings.json.gz, about 0.3 MB) and PC app (source
+  repository). No audio: per surah the basmala's and each ayah's start and end and the word starts, in ms of the
+  surah file, which Listen uses to play one ayah of the surah file and to fade on a word.
+- Licence text: none bundled (none published)
+- Notes: credit: "audio: QuranicAudio.com", timings from Quran Android. The database itself is not shipped.
+
+### Ayah timings of the Meddeb selection's surah files (selection_timings.json)
+
+- Version: format 1, computed on 2026-11-01 by tools/build_selection_timings.py (D4.11, #93): Islam Sobhi's Maryam
+  (mp3quran.net) and Yasser Salamah's Hadr Taha, Yasin and Ar-Rahman (archive.org)
+- SPDX: LicenseRef-NPL-1.1 (computed with Meddeb's live tracker on the fastconformer-quran model: an output of
+  the model, a "Derivative" in the sense of NPL-1.1 §1) AND NOASSERTION (derived from the audio files, see the
+  entries above)
+- Copyright: computed by Meddeb from the recitations by Islam Sobhi and Yasser Salamah with fastconformer-quran by
+  Muno459 / Quran-Lab
+- Source: tools/build_selection_timings.py (source repository) over the files named in the entries above
+- Ships in: Android app and web app (recite/data/selection_timings.json, about 50 KB) and PC app (source
+  repository). No audio: each ayah's and the basmala's start and end in ms of the surah file.
+- Licence text: licenses/npl_1_1_fastconformer_quran.txt (the model's licence, under which the file is shipped)
+- Notes: shipped non-commercially, with no profit (NPL-1.1 §3), with the credits of the model (fastconformer-quran
+  by Muno459, NPL-1.1) and of the recitations (mp3quran.net, archive.org).
 
 
 ## 4. Fonts

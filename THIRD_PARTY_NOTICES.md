@@ -311,14 +311,19 @@ Contents
 
 ### Recitation by Yasser Al-Dossary, Al-Fatiha in maqam Kurd (Meddeb's site)
 
-- Version: one MP3 file, 128 kbps, 43.17 s: Al-Fatiha 1:2-1:7 in maqam Kurd, cut by the user from the video "10
-  Maqams Surah Fatiha Sheikh Yasser al Dosari" (268-311 s)
+- Version: one MP3 file, 128 kbps, 43.17 s: Al-Fatiha 1:2-1:7 in maqam Kurd and the Aameen after it, cut by the user
+  from the video "10 Maqams Surah Fatiha Sheikh Yasser al Dosari" (268-311 s). Since Meddeb 0.23 (#112) the file
+  audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd_v2.mp3: the same clip re-encoded with its level changed (+4 dB
+  throughout, +3 dB more on the start of 1:2, easing out by 5 s), nothing cut or added; the Aameen is now kept at the
+  end of 1:7 (the user's request), where 0.22 left it out.
 - SPDX: NOASSERTION. The video states no licence.
 - Copyright: recitation by Yasser Al-Dossary
-- Source: https://karim-53.github.io/Meddeb/audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd.mp3
-- Ships in: the web repository (Meddeb's site, audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd.mp3, published there by the
-  user, #93); not in the APK. Listen's "Meddeb selection" plays time ranges of it (hand-checked ayah cuts in
-  recite/data/selection_timings.json); Android keeps it in the app's own storage once fetched.
+- Source: https://karim-53.github.io/Meddeb/audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd_v2.mp3 (Meddeb 0.22:
+  audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd.mp3, the clip before the change)
+- Ships in: the web repository (Meddeb's site: audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd.mp3, published there by the
+  user, #93, kept for 0.22 installs; audio/Yasser-Al-Dussary_Al-Fatiha_Hafs_Kurd_v2.mp3, #112); not in the APK.
+  Listen's "Meddeb selection" plays time ranges of it (hand-checked ayah cuts in recite/data/selection_timings.json);
+  Android keeps it in the app's own storage once fetched.
 - Licence text: none bundled (none published)
 - Notes: credit shown in Listen: "Recitation (Meddeb selection): Yasser Al-Dossary, maqam Kurd (Meddeb's site)",
   with the selection's other sources.
