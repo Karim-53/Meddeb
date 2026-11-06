@@ -24,21 +24,19 @@
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html",
  "beta": {
-  "version_code": 25,
-  "version_name": "0.25",
-  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.25/meddeb_v0.25.apk",
-  "size": 46348936,
-  "sha256": "69fc1b5ffa9dac99bdc75239ad1b95682dc43a3f46bd1ac3f545309cc973e2a8",
+  "version_code": 26,
+  "version_name": "0.26",
+  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.26/meddeb_v0.26.apk",
+  "size": 46349992,
+  "sha256": "99b607a0436394a007101e7edd25bd4371b7420853452792624ff43ad0ff0db0",
   "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
   "min_sdk": 26,
   "min_version_code": 0,
   "released": "2026-11-06",
   "notes": [
-   "Change: in Blind, no \"next page\" line before you reach the end of the page; then the next page continues below it.",
-   "Change: in Blind, a surah's title and basmala appear only once you say its first word.",
-   "Fix: a Review card's hint is never text you have not recited; it can be the first words of the ayah itself.",
-   "New: Listen has a row of shortcuts: this page, this surah, your last ranges, Al-Kahf, Al-Mulk, Ayat al-Kursi and more.",
-   "New: an arrow button in Listen's playing row opens the whole panel again; Review's menu button uses the same arrow."
+   "Change: every Quran page now has the same text size in Fit page and Fit width, fitted to the book's widest line.",
+   "Change: in Hidden, Next word only shows the next word; it is counted neither right nor wrong (a learning mode).",
+   "New: in Hidden, a double tap on a hidden word shows it, and Next word goes on from there."
   ]
  }
 }
