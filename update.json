@@ -24,26 +24,25 @@
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html",
  "beta": {
-  "version_code": 23,
-  "version_name": "0.23",
-  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.23/meddeb_v0.23.apk",
-  "size": 46340776,
-  "sha256": "dd015bb861d4e5ae53d9895b3000b02fe765ef0be5df2708c5f3ef1fa0f42a3e",
+  "version_code": 24,
+  "version_name": "0.24",
+  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.24/meddeb_v0.24.apk",
+  "size": 46342500,
+  "sha256": "109a6bbc8785f654cf1ff004e1b225688178f403cd8ff5f42f9abefa485b0743",
   "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
   "min_sdk": 26,
   "min_version_code": 0,
-  "released": "2026-11-05",
+  "released": "2026-11-06",
   "notes": [
-   "Change: Listen moved into Recite: the speaker button next to the microphone opens a panel to pick a range and play it.",
-   "Change: a Review card ends by itself once its last word is read, and says when it comes back (in 5 days, in 40 min).",
-   "New: Settings > Review > Cards a day (15 by default); cards now also cover the page you are learning and small gaps.",
-   "New: tap an ayah's number to underline the last words that tell which ayah comes next.",
-   "Change: a long press on a word adds or removes an insertion mark before it, with a short buzz; sliding no longer does.",
-   "New: going back a page lands at its end; a strip shows the next page's first words, and pulling up turns the page.",
-   "Fix: two words said in swapped order are a mistake; Meddeb learns from your corrections to raise fewer false alarms.",
-   "Fix: Yasser's ayat that he joins without a pause now play from his clean recording instead of staying text only.",
-   "Change: \"Manzil\" is now \"Oldest page\"; once you know more than 10 pages, Al-Fatiha's page always counts as today.",
-   "Fix: after an undo the word shows red; Help fits a phone screen; keyboard hints only with a keyboard; a fresh install explains itself."
+   "Change: Listen's row now sits above the Recite row, which stays whole; the cards button or the microphone hides it.",
+   "Change: after a Review card's result, the speaker opens Listen on that card's passage; the card row has no play button.",
+   "Change: a card's menu has Bury until tomorrow and Previous card; Suspend is gone. The card's close button is leftmost.",
+   "Change: Listen's plays are x1, x3, x5, x11, x19 or x40; Oldest page plays your whole run of recited pages once.",
+   "Fix: an update now installs while Listen is paused or stopped.",
+   "Fix: a card left 10 minutes without recitation starts again instead of being marked wrong.",
+   "Fix: after a card, Next word goes on from where you were; switching to Review no longer opens the session summary.",
+   "Change: due cards close to each other are merged into one card for the day; the help's ? is lit while it is open.",
+   "Change: a new Next word icon."
   ]
  }
 }
