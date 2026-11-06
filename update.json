@@ -24,25 +24,21 @@
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html",
  "beta": {
-  "version_code": 24,
-  "version_name": "0.24",
-  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.24/meddeb_v0.24.apk",
-  "size": 46342500,
-  "sha256": "109a6bbc8785f654cf1ff004e1b225688178f403cd8ff5f42f9abefa485b0743",
+  "version_code": 25,
+  "version_name": "0.25",
+  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.25/meddeb_v0.25.apk",
+  "size": 46348936,
+  "sha256": "69fc1b5ffa9dac99bdc75239ad1b95682dc43a3f46bd1ac3f545309cc973e2a8",
   "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
   "min_sdk": 26,
   "min_version_code": 0,
   "released": "2026-11-06",
   "notes": [
-   "Change: Listen's row now sits above the Recite row, which stays whole; the cards button or the microphone hides it.",
-   "Change: after a Review card's result, the speaker opens Listen on that card's passage; the card row has no play button.",
-   "Change: a card's menu has Bury until tomorrow and Previous card; Suspend is gone. The card's close button is leftmost.",
-   "Change: Listen's plays are x1, x3, x5, x11, x19 or x40; Oldest page plays your whole run of recited pages once.",
-   "Fix: an update now installs while Listen is paused or stopped.",
-   "Fix: a card left 10 minutes without recitation starts again instead of being marked wrong.",
-   "Fix: after a card, Next word goes on from where you were; switching to Review no longer opens the session summary.",
-   "Change: due cards close to each other are merged into one card for the day; the help's ? is lit while it is open.",
-   "Change: a new Next word icon."
+   "Change: in Blind, no \"next page\" line before you reach the end of the page; then the next page continues below it.",
+   "Change: in Blind, a surah's title and basmala appear only once you say its first word.",
+   "Fix: a Review card's hint is never text you have not recited; it can be the first words of the ayah itself.",
+   "New: Listen has a row of shortcuts: this page, this surah, your last ranges, Al-Kahf, Al-Mulk, Ayat al-Kursi and more.",
+   "New: an arrow button in Listen's playing row opens the whole panel again; Review's menu button uses the same arrow."
   ]
  }
 }
