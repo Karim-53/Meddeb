@@ -24,18 +24,23 @@
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html",
  "beta": {
-  "version_code": 27,
-  "version_name": "0.27",
-  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.27/meddeb_v0.27.apk",
-  "size": 46350252,
-  "sha256": "ca03a54baac5ff2f195d95f5a63f31fadd33ce7a28f638ad30e51ce2ea20f80e",
+  "version_code": 28,
+  "version_name": "0.28",
+  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.28/meddeb_v0.28.apk",
+  "size": 46361112,
+  "sha256": "e516bb02b2cee427d92826e048e02f1416862fc5a60b0cc14bf441b3e1bd4cd3",
   "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
   "min_sdk": 26,
   "min_version_code": 0,
   "released": "2026-11-07",
   "notes": [
-   "Fix: in Blind, tapping, double tapping and long pressing a word work again on the page you go on to.",
-   "Change: in Blind, the next page becomes the page shown at its first word; the page you finished stays above it."
+   "Change: the word details, the Review helper and Listen are rows above the Recite bar, each with its close button.",
+   "Change: the Review helper lists the similar places as blocks, the shared words coloured; a tap opens that place.",
+   "New: hizb quarter, juz and sajda marks in the text.",
+   "New: Settings > Phone > Shake the phone: replay the ayah (default), send feedback or nothing.",
+   "New: in Fit page, swipe up or down to turn pages; in big text, pulling past the end continues on the next page.",
+   "Fix: Install now stops the recitation and Listen itself; a silent session no longer holds the automatic update.",
+   "New: in Listen, the arrow shows Reciter, Vary and Pause between plays."
   ]
  }
 }
