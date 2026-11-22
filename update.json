@@ -24,19 +24,22 @@
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html",
  "beta": {
-  "version_code": 29,
-  "version_name": "0.29",
-  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.29/meddeb_v0.29.apk",
-  "size": 46361396,
-  "sha256": "cf34b2eb174fb9c4c45b23f126909d51e707c576939da818454027aaaccdb6ea",
+  "version_code": 30,
+  "version_name": "0.30",
+  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.30/meddeb_v0.30.apk",
+  "size": 46369504,
+  "sha256": "6b5ba049ffd1a8789d513a319f4b6f4b43f3c4e1066899cd54ac78dd724753c0",
   "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
   "min_sdk": 26,
   "min_version_code": 0,
-  "released": "2026-11-13",
+  "released": "2026-11-22",
   "notes": [
-   "Fix: the app no longer freezes after a tap on a word (0.28 locked the whole screen, the microphone button too).",
-   "Fix: a single tap on a word opens its details again, also during a recitation.",
-   "Fix: the hizb quarter, juz and sajda marks now show above their words (0.28 never drew them)."
+   "Fix: on the phone a word is now compared with what was heard exactly as in the benchmark; a dropped article or ending no longer passes as the word.",
+   "Change: a heard form you mark correct is kept only when it sounds like the word; another word said for it (the Fire for the Garden) is a mistake again.",
+   "Fix: the \"correct (you)\" marks that the 0.28 freeze put on a tapped word are ignored (the page, Stats and what Meddeb learns).",
+   "Change: in Blind, the first press of the next-word button shows the end of the page before, nothing counted; the pull down is gone.",
+   "Change: no greyed first line of the next page at the end of a page.",
+   "New: in the car, the voice assistant can ask Meddeb for \"the full surah Taha\", \"my last reading\", \"something\" (it goes on where Listen stopped) or \"start reciting\"."
   ]
  }
 }
