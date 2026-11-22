@@ -24,22 +24,19 @@
  ],
  "page_url": "https://karim-53.github.io/Meddeb/download.html",
  "beta": {
-  "version_code": 30,
-  "version_name": "0.30",
-  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.30/meddeb_v0.30.apk",
-  "size": 46369504,
-  "sha256": "6b5ba049ffd1a8789d513a319f4b6f4b43f3c4e1066899cd54ac78dd724753c0",
+  "version_code": 31,
+  "version_name": "0.31",
+  "apk_url": "https://github.com/Karim-53/Meddeb/releases/download/android-v0.31/meddeb_v0.31.apk",
+  "size": 46379048,
+  "sha256": "02a4a50fb8ac21e9073891cc7532bfa00833bf04fd56691de573b8ea2ad9de4b",
   "cert_sha256": "89d3b527fedb596979bb4026a37e42147d0447db5b3064b1e13eb7b2cbdb2878",
   "min_sdk": 26,
   "min_version_code": 0,
-  "released": "2026-11-22",
+  "released": "2026-11-23",
   "notes": [
-   "Fix: on the phone a word is now compared with what was heard exactly as in the benchmark; a dropped article or ending no longer passes as the word.",
-   "Change: a heard form you mark correct is kept only when it sounds like the word; another word said for it (the Fire for the Garden) is a mistake again.",
-   "Fix: the \"correct (you)\" marks that the 0.28 freeze put on a tapped word are ignored (the page, Stats and what Meddeb learns).",
-   "Change: in Blind, the first press of the next-word button shows the end of the page before, nothing counted; the pull down is gone.",
-   "Change: no greyed first line of the next page at the end of a page.",
-   "New: in the car, the voice assistant can ask Meddeb for \"the full surah Taha\", \"my last reading\", \"something\" (it goes on where Listen stopped) or \"start reciting\"."
+   "New: in Fit width and Own size, Shown and Hidden are one continuous scroll through the pages, at the speed of your finger, with a thin \"Page n\" line above each page.",
+   "Change: there, the page number at the top follows the page you read once the scroll rests, and a tap or a long press works on any page on screen.",
+   "Change: there, a recitation goes on to the next page without a jump: the text simply scrolls on."
   ]
  }
 }
